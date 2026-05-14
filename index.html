@@ -71,22 +71,6 @@ main {
 }
 .origin-banner .edit-btn:hover { background: var(--accent); color: var(--navy); }
 
-/* MODE TABS */
-.mode-tabs {
-  display: flex; gap: 4px; background: #e1e6ed; border-radius: 8px;
-  padding: 4px; margin-bottom: 12px;
-}
-.mode-tab {
-  flex: 1; padding: 10px 8px; border: none; background: transparent;
-  font-family: 'IBM Plex Sans', sans-serif; font-weight: 700;
-  font-size: 12px; letter-spacing: 0.5px; color: #667;
-  border-radius: 6px; cursor: pointer; transition: all 0.15s;
-  text-transform: uppercase;
-}
-.mode-tab.active {
-  background: white; color: var(--navy); box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
 /* INPUT SECTION */
 .input-section {
   background: white; border-radius: 10px; border: 2px solid #dde;
@@ -125,6 +109,62 @@ main {
 }
 
 .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+
+/* Image input buttons */
+.img-btn-row { display: flex; gap: 8px; margin-top: 10px; }
+.img-btn {
+  flex: 1; padding: 10px 12px; background: white; border: 1.5px dashed #bbc;
+  color: #556; border-radius: 6px; cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif; font-weight: 700;
+  font-size: 12px; letter-spacing: 0.5px; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.img-btn:hover { border-color: var(--accent); color: var(--navy); background: #fffdf5; }
+.img-btn:active { transform: scale(0.98); }
+.img-btn span { font-size: 16px; }
+
+/* OCR progress */
+.ocr-progress {
+  margin-top: 10px; padding: 10px 12px;
+  background: linear-gradient(135deg, #fff8e6 0%, #fff4d6 100%);
+  border: 1.5px solid var(--accent); border-radius: 6px;
+}
+.ocr-progress-header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 700; color: var(--navy);
+  margin-bottom: 6px;
+}
+.ocr-spinner {
+  display: inline-block; animation: spin 1.5s linear infinite;
+}
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.ocr-progress-bar {
+  height: 5px; background: #e8d5a0; border-radius: 3px; overflow: hidden;
+}
+.ocr-progress-fill {
+  height: 100%; background: var(--accent); width: 0%;
+  transition: width 0.3s; border-radius: 3px;
+}
+
+/* Image preview thumbnail */
+.img-preview {
+  margin-top: 10px; position: relative; display: inline-block;
+  border: 2px solid #dde; border-radius: 6px; overflow: hidden;
+  background: #f8f9fc;
+}
+.img-preview img {
+  display: block; max-width: 100%; max-height: 140px;
+  object-fit: contain;
+}
+.img-preview-remove {
+  position: absolute; top: 4px; right: 4px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(0,0,0,0.7); color: white; border: none;
+  cursor: pointer; font-size: 18px; font-weight: bold;
+  line-height: 1; padding: 0;
+}
+.img-preview-remove:hover { background: var(--red); }
+
 .btn {
   padding: 12px 20px; border-radius: 6px; border: none;
   font-family: 'IBM Plex Sans', sans-serif; font-weight: 800;
@@ -356,10 +396,6 @@ main {
 #toast.error { border-left-color: var(--red); }
 #toast.success { border-left-color: var(--green); }
 
-/* Hidden inputs by mode */
-.mode-panel { display: none; }
-.mode-panel.active { display: block; }
-
 @media (max-width: 600px) {
   main { padding: 12px; }
   .input-body textarea { min-height: 110px; font-size: 14px; }
@@ -394,13 +430,6 @@ main {
     <button class="edit-btn" onclick="useCurrentLocation()">📍 USE GPS</button>
   </div>
 
-  <!-- MODE TABS -->
-  <div class="mode-tabs">
-    <button class="mode-tab active" data-mode="paste" onclick="setMode('paste')">📋 PASTE</button>
-    <button class="mode-tab" data-mode="address" onclick="setMode('address')">🏠 ADDRESS</button>
-    <button class="mode-tab" data-mode="plss" onclick="setMode('plss')">🗺 PLSS</button>
-  </div>
-
   <!-- INPUT SECTION -->
   <div class="input-section">
     <div class="input-header">
@@ -412,38 +441,49 @@ main {
     </div>
     <div class="input-body">
 
-      <!-- PASTE MODE -->
-      <div class="mode-panel active" id="panel-paste">
-        <textarea id="input-text" placeholder="Paste anything the field sends — coordinates, address, or turn-by-turn.
+      <textarea id="input-text" placeholder="Paste anything the field sends — text, image, coordinates, address, or turn-by-turn.
 
 Examples:
 • Jo Ann Esse Unit D1 : From the intersection of IH 37 &amp; Farm Road 99... Latitude: 28 42' 57.655&quot; N Longitude: 98 8' 26.03&quot;
 • 2682 Wald Rd, New Braunfels, TX 78132
-• Head north on FM 99 for 5.2 miles to CR 271, turn right..."></textarea>
-        <div class="input-helper">
-          <span class="pulse"></span>
-          <span>Auto-detects coordinates, addresses, or intersections (or tap FIND)</span>
+• Head north on FM 99 for 5.2 miles to CR 271, turn right...
+• Or paste/upload a screenshot — text will be extracted automatically"></textarea>
+      <div class="input-helper">
+        <span class="pulse"></span>
+        <span>Auto-detects text, images, coordinates, addresses, or intersections</span>
+      </div>
+
+      <!-- Image source buttons -->
+      <div class="img-btn-row">
+        <button class="img-btn" onclick="document.getElementById('img-upload').click()">
+          <span>🖼️</span> CHOOSE IMAGE
+        </button>
+        <button class="img-btn" onclick="document.getElementById('img-camera').click()">
+          <span>📷</span> TAKE PHOTO
+        </button>
+      </div>
+      <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="handleImageFile(this.files[0])">
+      <input type="file" id="img-camera" accept="image/*" capture="environment" style="display:none" onchange="handleImageFile(this.files[0])">
+
+      <!-- OCR progress -->
+      <div class="ocr-progress" id="ocr-progress" style="display:none;">
+        <div class="ocr-progress-header">
+          <span class="ocr-spinner">⏳</span>
+          <span id="ocr-status">Reading image...</span>
+        </div>
+        <div class="ocr-progress-bar">
+          <div class="ocr-progress-fill" id="ocr-progress-fill"></div>
         </div>
       </div>
 
-      <!-- ADDRESS MODE -->
-      <div class="mode-panel" id="panel-address">
-        <input type="text" id="input-address" placeholder="2682 Wald Rd, New Braunfels, TX 78132" autocomplete="off">
-        <div class="input-helper" style="margin-top: 8px;">
-          <span>💡 Street address, place name, or business — anything Google Maps would find</span>
-        </div>
-      </div>
-
-      <!-- PLSS MODE -->
-      <div class="mode-panel" id="panel-plss">
-        <input type="text" id="input-plss" placeholder="Sec 14, T2N, R5W, San Bernardino Meridian" autocomplete="off">
-        <div class="input-helper" style="margin-top: 8px;">
-          <span>💡 Section-Township-Range. Examples: <code>Sec 14, T2N R5W</code> or <code>SE/4 Sec 23 T3S R4E</code></span>
-        </div>
+      <!-- Image preview -->
+      <div class="img-preview" id="img-preview" style="display:none;">
+        <img id="img-preview-img" src="" alt="">
+        <button class="img-preview-remove" onclick="clearImagePreview()" title="Remove">×</button>
       </div>
 
       <div class="btn-row">
-        <button class="btn btn-find" id="find-btn" onclick="processInput()">📍 FIND LOCATION</button>
+        <button class="btn btn-find" id="find-btn" onclick="parseDirections()">📍 FIND LOCATION</button>
         <button class="btn btn-clear" onclick="clearAll()">CLEAR</button>
       </div>
     </div>
@@ -548,7 +588,6 @@ Examples:
    STATE
    ═══════════════════════════════════════════════════════════════ */
 var currentResult = null; // { name, lat, lng, directions, isFavorite, id }
-var currentMode = 'paste';
 var renameContext = null; // { type: 'fav'|'hist', id }
 var originOverride = null; // GPS coords when user taps USE GPS
 
@@ -557,50 +596,6 @@ var DEFAULT_ORIGIN = {
   address: '2682 Wald Rd, New Braunfels, TX 78132',
   lat: 29.7831, lng: -98.1245 // approximate, will be refined on first lookup
 };
-
-/* ═══════════════════════════════════════════════════════════════
-   MODE SWITCHING
-   ═══════════════════════════════════════════════════════════════ */
-function setMode(mode) {
-  currentMode = mode;
-  document.querySelectorAll('.mode-tab').forEach(function(t) {
-    t.classList.toggle('active', t.dataset.mode === mode);
-  });
-  document.querySelectorAll('.mode-panel').forEach(function(p) {
-    p.classList.toggle('active', p.id === 'panel-' + mode);
-  });
-
-  var modeIcon = document.getElementById('mode-icon');
-  var modeTitle = document.getElementById('mode-title');
-  var modeSub = document.getElementById('mode-subtitle');
-
-  if (mode === 'paste') {
-    modeIcon.textContent = '📋'; modeTitle.textContent = 'PASTE ANYTHING';
-    modeSub.textContent = 'Coordinates, address, or turn-by-turn — auto-detects';
-    setTimeout(function(){ document.getElementById('input-text').focus(); }, 50);
-  } else if (mode === 'address') {
-    modeIcon.textContent = '🏠'; modeTitle.textContent = 'STREET ADDRESS';
-    modeSub.textContent = 'Address, place name, or business';
-    setTimeout(function(){ document.getElementById('input-address').focus(); }, 50);
-  } else if (mode === 'plss') {
-    modeIcon.textContent = '🗺'; modeTitle.textContent = 'PLSS / SECTION-TOWNSHIP-RANGE';
-    modeSub.textContent = 'Public Land Survey System coordinates';
-    setTimeout(function(){ document.getElementById('input-plss').focus(); }, 50);
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   INPUT PROCESSING
-   ═══════════════════════════════════════════════════════════════ */
-function processInput() {
-  if (currentMode === 'paste') {
-    parseDirections();
-  } else if (currentMode === 'address') {
-    parseAddress();
-  } else if (currentMode === 'plss') {
-    parsePLSS();
-  }
-}
 
 function parseDirections() {
   var text = document.getElementById('input-text').value.trim();
@@ -710,37 +705,70 @@ function offerGoogleFallback(text, queryHint) {
     '<a href="' + googleUrl + '" target="_blank" class="nav-btn view">' +
       '<span class="arrow">🔍</span> SEARCH ON GOOGLE MAPS' +
     '</a>' +
-    '<div class="section-label" style="margin-top:16px;">Or try the other tabs:</div>' +
+    '<div class="section-label" style="margin-top:16px;">Tip:</div>' +
     '<div style="font-size:13px;color:#555;line-height:1.6;padding:4px 0;">' +
-      '• <strong>ADDRESS tab</strong> for a clean street address<br>' +
-      '• <strong>PLSS tab</strong> for Section-Township-Range<br>' +
-      '• Ask the field to include lat/long if possible' +
+      '• Ask the field to include lat/long if possible<br>' +
+      '• Try retyping the address with city + state<br>' +
+      '• Take a clearer photo and try again' +
     '</div>' +
     '<div class="section-label">What you pasted:</div>' +
     '<div class="directions-text">' + escHtml(text.slice(0, 600)) + (text.length > 600 ? '...' : '') + '</div>';
 }
 
-// Extract a street-address-style pattern from text
+// Extract a street-address-style pattern from text.
+// Strategy: look for "number + word(s) + city + 2-letter state" — let the geocoder
+// decide if the street type is valid. This catches Wind, Cove, Pass, Bend, Crossing,
+// Run, Park, Place, Hollow, and every other street suffix the field throws at us.
 function extractAddress(text) {
-  // Pattern A: "1234 Street Name, City, ST 12345" (standard US address)
-  var fullAddr = text.match(/(\d{1,6}\s+[A-Z][A-Za-z0-9.\s]{2,40}(?:Rd|Road|St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway|Pkwy|Parkway|Ct|Court|Trail|Trl|Cir|Circle|FM|CR|County\s+Road|Ranch\s+Road|Farm\s+Road|RR|Route)\.?(?:\s+\w+)?,?\s*[A-Z][A-Za-z\s]{2,30}(?:,\s*)?[A-Z]{2}(?:\s+\d{5})?)/);
-  if (fullAddr) return fullAddr[1].trim();
+  // US state list (covers all 50)
+  var STATE_RX = '(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New\\s+Hampshire|New\\s+Jersey|New\\s+Mexico|New\\s+York|North\\s+Carolina|North\\s+Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode\\s+Island|South\\s+Carolina|South\\s+Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West\\s+Virginia|Wisconsin|Wyoming)';
 
-  // Pattern B: "1234 Street Name, City ST" without zip
-  var noZip = text.match(/(\d{1,6}\s+[A-Z][A-Za-z0-9.\s]{2,40}(?:Rd|Road|St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway|Pkwy|Parkway|Ct|Court|Trail|Trl|Cir|Circle)\.?,?\s+[A-Z][A-Za-z\s]{2,30},?\s+[A-Z]{2})\b/);
-  if (noZip) return noZip[1].trim();
+  // Pattern A (permissive): "<number> <street words>, <city>, <ST> <zip?>"
+  // Doesn't require a specific street type — any word(s) between number and comma will do.
+  var rxA = new RegExp(
+    '(\\d{1,6}\\s+' +                          // street number
+    '[A-Z][A-Za-z0-9.\\s\\-]{2,60}?' +         // street name (any words, non-greedy)
+    ',\\s*' +                                  // comma after street
+    '[A-Z][A-Za-z\\s\\-\\.]{1,40}?' +          // city
+    ',?\\s*' +                                 // optional comma
+    STATE_RX +                                 // state
+    '(?:\\s+\\d{5}(?:-\\d{4})?)?)' +           // optional zip
+    '\\b',
+    ''
+  );
+  var fullAddr = text.match(rxA);
+  if (fullAddr) return cleanAddress(fullAddr[1]);
 
-  // Pattern C: A city + state at end of a line (less reliable but useful)
-  var cityState = text.match(/([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)?,?\s+(?:TX|Texas|OK|Oklahoma|NM|New\s+Mexico|LA|Louisiana|CO|Colorado|WY|Wyoming|ND|North\s+Dakota|PA|Pennsylvania|WV|West\s+Virginia|KS|Kansas|UT|Utah|MT|Montana|CA|California|AK|Alaska))(?:\s+\d{5})?/);
-  if (cityState) {
-    // Look for a street/number before it on the same line or nearby
-    var idx = text.indexOf(cityState[1]);
-    var lookback = text.slice(Math.max(0, idx - 80), idx);
-    var withStreet = lookback.match(/(\d{1,6}\s+[A-Z][A-Za-z0-9.\s]{2,40}(?:Rd|Road|St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway))\.?\s*,?\s*$/);
-    if (withStreet) return (withStreet[1] + ', ' + cityState[1]).trim();
+  // Pattern B: "<number> <street words> <city> <ST>" (no comma between street and city — looser)
+  // Requires a known street suffix to avoid false positives without commas
+  var rxB = new RegExp(
+    '(\\d{1,6}\\s+' +
+    '[A-Z][A-Za-z0-9.\\s\\-]{2,40}?\\s+' +
+    '(?:Rd|Road|St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway|Pkwy|Parkway|Ct|Court|Trail|Trl|Cir|Circle|Place|Pl|Park|Pass|Bend|Cove|Run|Crossing|Xing|Hollow|Ridge|Wind|Walk|Plaza|Square|Terrace|Ter|Loop)\\.?' +
+    '\\s+[A-Z][A-Za-z\\s\\-\\.]{1,40}?' +
+    ',?\\s+' + STATE_RX +
+    '(?:\\s+\\d{5})?)\\b',
+    ''
+  );
+  var noCommaAddr = text.match(rxB);
+  if (noCommaAddr) return cleanAddress(noCommaAddr[1]);
+
+  // Pattern C: City + state alone (fallback — no street number)
+  var rxC = new RegExp('([A-Z][A-Za-z\\-\\.]+(?:\\s+[A-Z][A-Za-z\\-\\.]+){0,3}),?\\s+' + STATE_RX + '(?:\\s+\\d{5})?', '');
+  var cityState = text.match(rxC);
+  if (cityState && cityState[0].length > 6) {
+    // Avoid matching things like "Interstate 35" that just happen to capitalize
+    if (!/^(Interstate|Highway|Route|County|Farm|Ranch|State|US)\b/i.test(cityState[0])) {
+      return cleanAddress(cityState[0]);
+    }
   }
 
   return null;
+}
+
+// Clean an extracted address — collapse whitespace, trim, normalize commas
+function cleanAddress(s) {
+  return s.replace(/\s+/g, ' ').replace(/\s*,\s*/g, ', ').trim();
 }
 
 // Extract an intersection/landmark from turn-by-turn text — typically the FINAL/destination intersection
@@ -800,70 +828,6 @@ function detectStateHint(text) {
   return null;
 }
 
-function parseAddress() {
-  var addr = document.getElementById('input-address').value.trim();
-  if (!addr) { toast('Enter an address first', 'error'); return; }
-
-  showLoading('Looking up address...');
-  geocodeAddress(addr).then(function(geo) {
-    if (geo) {
-      displayResult({
-        name: geo.displayName || addr,
-        lat: geo.lat,
-        lng: geo.lng,
-        rawLat: geo.lat.toFixed(6),
-        rawLng: geo.lng.toFixed(6),
-        directions: 'Address: ' + addr,
-        source: 'geocoded'
-      });
-    } else {
-      // Fallback: hand off to Google Maps directly
-      hideResult();
-      var fallbackUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(addr);
-      window.open(fallbackUrl, '_blank');
-      toast('Geocoding unavailable — opened in Google Maps', 'success');
-    }
-  }).catch(function(err) {
-    console.error(err);
-    var fallbackUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(addr);
-    window.open(fallbackUrl, '_blank');
-    toast('Geocoding failed — opened in Google Maps', 'success');
-    hideResult();
-  });
-}
-
-function parsePLSS() {
-  var input = document.getElementById('input-plss').value.trim();
-  if (!input) { toast('Enter PLSS coordinates first', 'error'); return; }
-
-  showLoading('Looking up PLSS section...');
-  geocodePLSS(input).then(function(geo) {
-    if (geo) {
-      displayResult({
-        name: geo.displayName || input,
-        lat: geo.lat,
-        lng: geo.lng,
-        rawLat: geo.lat.toFixed(6),
-        rawLng: geo.lng.toFixed(6),
-        directions: 'PLSS: ' + input,
-        source: 'plss'
-      });
-    } else {
-      showError('PLSS section not found',
-        'Could not locate that section. PLSS lookup requires:<br><br>' +
-        '• A recognized township & range (e.g., T2N, R5W)<br>' +
-        '• A section number (1-36)<br>' +
-        '• Optionally a meridian or state<br><br>' +
-        '<strong>Examples that work:</strong><br>' +
-        '• <code>Sec 14, T2N, R5W, San Bernardino Meridian</code><br>' +
-        '• <code>Section 23, Township 3 South, Range 4 East, Texas</code>' +
-        '<div class="hint">PLSS coverage varies by state. Western US (TX, NM, OK, CO, WY, etc.) generally works well.</div>');
-    }
-  }).catch(function() {
-    showError('PLSS lookup failed', 'Network error — check your connection and try again.');
-  });
-}
-
 /* ═══════════════════════════════════════════════════════════════
    GEOCODING (Nominatim / OpenStreetMap, free, no key)
    ═══════════════════════════════════════════════════════════════ */
@@ -881,17 +845,6 @@ function geocodeAddress(addr) {
       }
       return null;
     });
-}
-
-function geocodePLSS(input) {
-  // Nominatim can sometimes resolve PLSS via structured queries; we also try BLM-style notation
-  var normalized = input.replace(/\s+/g, ' ').trim();
-  return geocodeAddress(normalized + ', USA').then(function(r) {
-    if (r) return r;
-    // Strip qualifiers (SE/4, NW/4, etc.) and retry
-    var stripped = normalized.replace(/^[NSEW][NSEW]?\/?\d?\s+/i, '').replace(/^(NE|NW|SE|SW)\s*1?\/?4\s*/i, '');
-    return geocodeAddress(stripped + ', USA');
-  });
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1591,9 +1544,9 @@ var examples = [
 ];
 
 function loadExample(idx) {
-  setMode('paste');
   document.getElementById('input-text').value = examples[idx];
   document.getElementById('input-text').focus();
+  clearImagePreview();
   toast('Example loaded — tap FIND LOCATION');
 }
 
@@ -1602,13 +1555,11 @@ function loadExample(idx) {
    ═══════════════════════════════════════════════════════════════ */
 function clearAll() {
   document.getElementById('input-text').value = '';
-  document.getElementById('input-address').value = '';
-  document.getElementById('input-plss').value = '';
   hideResult();
+  clearImagePreview();
+  hideOCRProgress();
   currentResult = null;
-  if (currentMode === 'paste') document.getElementById('input-text').focus();
-  else if (currentMode === 'address') document.getElementById('input-address').focus();
-  else document.getElementById('input-plss').focus();
+  document.getElementById('input-text').focus();
 }
 
 function escHtml(t) {
@@ -1629,10 +1580,212 @@ function toast(msg, type) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   AUTO-PARSE ON PASTE
+   OCR (Optical Character Recognition) — lazy-loaded Tesseract.js
+   ═══════════════════════════════════════════════════════════════ */
+var tesseractLoadPromise = null;
+
+// Load Tesseract.js from CDN on first use
+function loadTesseract() {
+  if (tesseractLoadPromise) return tesseractLoadPromise;
+  if (typeof window.Tesseract !== 'undefined') {
+    tesseractLoadPromise = Promise.resolve(window.Tesseract);
+    return tesseractLoadPromise;
+  }
+
+  tesseractLoadPromise = new Promise(function(resolve, reject) {
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.onload = function() {
+      if (window.Tesseract) resolve(window.Tesseract);
+      else reject(new Error('Tesseract failed to load'));
+    };
+    script.onerror = function() { reject(new Error('Could not load OCR library — check internet')); };
+    document.head.appendChild(script);
+  });
+  return tesseractLoadPromise;
+}
+
+// Handle a File or Blob — run OCR and feed result into the parser
+function handleImageFile(file) {
+  if (!file) return;
+  if (!file.type || !file.type.startsWith('image/')) {
+    toast('Not an image file', 'error');
+    return;
+  }
+
+  // Show preview thumbnail
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var preview = document.getElementById('img-preview');
+    var img = document.getElementById('img-preview-img');
+    img.src = e.target.result;
+    preview.style.display = 'inline-block';
+  };
+  reader.readAsDataURL(file);
+
+  // Reset file inputs so the same file can be picked again later
+  document.getElementById('img-upload').value = '';
+  document.getElementById('img-camera').value = '';
+
+  runOCR(file);
+}
+
+function clearImagePreview() {
+  document.getElementById('img-preview').style.display = 'none';
+  document.getElementById('img-preview-img').src = '';
+}
+
+// Run OCR on a file/blob
+function runOCR(file) {
+  showOCRProgress(0, 'Loading OCR engine...');
+  document.getElementById('find-btn').disabled = true;
+
+  loadTesseract().then(function(Tesseract) {
+    showOCRProgress(10, 'Reading image...');
+    return Tesseract.recognize(file, 'eng', {
+      logger: function(m) {
+        if (m.status === 'recognizing text') {
+          var pct = 10 + Math.round(m.progress * 85);
+          showOCRProgress(pct, 'Reading text... ' + Math.round(m.progress * 100) + '%');
+        } else if (m.status === 'loading tesseract core' || m.status === 'initializing tesseract') {
+          showOCRProgress(5, 'Initializing OCR...');
+        } else if (m.status === 'loading language traineddata') {
+          showOCRProgress(8, 'Loading language model...');
+        }
+      }
+    });
+  }).then(function(result) {
+    var rawText = (result && result.data && result.data.text) || '';
+    var cleaned = cleanOCRText(rawText);
+
+    showOCRProgress(100, 'Done — extracted ' + cleaned.length + ' chars');
+    setTimeout(hideOCRProgress, 600);
+    document.getElementById('find-btn').disabled = false;
+
+    if (!cleaned || cleaned.length < 4) {
+      toast('Could not read text from image', 'error');
+      return;
+    }
+
+    // Drop the cleaned text into the textarea (append if there's already content)
+    var ta = document.getElementById('input-text');
+    if (ta.value.trim()) {
+      ta.value = ta.value.trim() + '\n\n' + cleaned;
+    } else {
+      ta.value = cleaned;
+    }
+
+    toast('Text extracted — parsing...', 'success');
+    // Auto-parse what we got
+    setTimeout(parseDirections, 200);
+  }).catch(function(err) {
+    console.error('OCR error:', err);
+    hideOCRProgress();
+    document.getElementById('find-btn').disabled = false;
+    toast('OCR failed: ' + err.message, 'error');
+  });
+}
+
+function showOCRProgress(pct, msg) {
+  var bar = document.getElementById('ocr-progress');
+  var fill = document.getElementById('ocr-progress-fill');
+  var status = document.getElementById('ocr-status');
+  bar.style.display = 'block';
+  fill.style.width = pct + '%';
+  status.textContent = msg;
+}
+
+function hideOCRProgress() {
+  document.getElementById('ocr-progress').style.display = 'none';
+  document.getElementById('ocr-progress-fill').style.width = '0%';
+}
+
+// Clean OCR output — fix common character recognition mistakes in coordinate text
+function cleanOCRText(text) {
+  if (!text) return '';
+  var cleaned = text;
+
+  // Normalize various quote / apostrophe / prime characters into standard ones
+  cleaned = cleaned.replace(/[\u2018\u2019\u2032\u02B9\u02BC`´]/g, "'");      // smart quotes / primes → '
+  cleaned = cleaned.replace(/[\u201C\u201D\u2033\u02BA]/g, '"');              // smart double quotes → "
+  cleaned = cleaned.replace(/[\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-');  // various dashes → -
+  cleaned = cleaned.replace(/[\u00BA\u00B0]/g, '°');                          // normalize degree variants → °
+
+  // Fix mangled words BEFORE numeric cleanup (so e.g. "Latltude" → "Latitude")
+  cleaned = cleaned.replace(/L\s*a\s*t\s*[il1|]\s*t\s*u\s*d\s*e/gi, 'Latitude');
+  cleaned = cleaned.replace(/L\s*o\s*n\s*g\s*[il1|]\s*t\s*u\s*d\s*e/gi, 'Longitude');
+  cleaned = cleaned.replace(/\bLat\s*[:;]\s*/gi, 'Lat: ');
+  cleaned = cleaned.replace(/\bLong?\s*[:;]\s*/gi, 'Long: ');
+
+  // In numeric coordinate contexts only, fix OCR letter→digit confusions.
+  // Match a sequence that LOOKS like coords: starts/ends with N/S/E/W or has degree marks
+  cleaned = cleaned.replace(
+    /(\b\d[\dOlISBZo\s°'"\.\-]{3,40}["'°]?\s*[NSEW]\b)/gi,
+    function(match) {
+      return match
+        .replace(/[Oo]/g, '0')
+        .replace(/[lI|]/g, '1')
+        .replace(/B(?=\d)|(?<=\d)B/g, '8')
+        .replace(/Z(?=\d)|(?<=\d)Z/g, '2')
+        .replace(/S(?=\d)|(?<=\d)S(?![EW])/g, '5');
+    }
+  );
+
+  // Clean coordinate clusters that START with N/S/E/W (the second coord of a pair)
+  cleaned = cleaned.replace(
+    /(\b[NSEW]\s*\d[\dOlISBZo\s°'"\.\-]{3,40}["'°]?)/gi,
+    function(match) {
+      return match
+        .replace(/([NSEW])(\s*)([\dOlISBZo\s°'"\.\-]+)$/i, function(_, dir, sp, nums) {
+          var cleanedNums = nums
+            .replace(/[Oo]/g, '0')
+            .replace(/[lI|]/g, '1')
+            .replace(/B(?=\d)|(?<=\d)B/g, '8')
+            .replace(/Z(?=\d)|(?<=\d)Z/g, '2');
+          return dir + sp + cleanedNums;
+        });
+    }
+  );
+
+  // Clean numeric clusters following an explicit Lat/Long label
+  cleaned = cleaned.replace(
+    /((?:Latitude|Longitude|Lat|Long)\s*[:;]?\s*)([\dOlISBZo\s°'"\.\-]{3,40})/gi,
+    function(match, label, nums) {
+      return label + nums
+        .replace(/[Oo]/g, '0')
+        .replace(/[lI|]/g, '1')
+        .replace(/B(?=\d)|(?<=\d)B/g, '8')
+        .replace(/Z(?=\d)|(?<=\d)Z/g, '2');
+    }
+  );
+
+  // Collapse excessive whitespace but preserve line breaks
+  cleaned = cleaned.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+
+  return cleaned;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTO-PARSE ON PASTE (text or image)
    ═══════════════════════════════════════════════════════════════ */
 document.getElementById('input-text').addEventListener('paste', function(e) {
-  // Allow paste to complete, then auto-parse
+  // Check clipboard for an image first
+  var items = (e.clipboardData || window.clipboardData) && (e.clipboardData || window.clipboardData).items;
+  if (items) {
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      if (item.kind === 'file' && item.type.indexOf('image/') === 0) {
+        e.preventDefault();
+        var blob = item.getAsFile();
+        if (blob) {
+          handleImageFile(blob);
+        }
+        return;
+      }
+    }
+  }
+
+  // Otherwise allow text paste to complete, then auto-parse
   setTimeout(function() {
     var v = document.getElementById('input-text').value.trim();
     if (v.length > 5) {
@@ -1641,13 +1794,23 @@ document.getElementById('input-text').addEventListener('paste', function(e) {
   }, 100);
 });
 
-// Enter key submits in single-line inputs
-document.getElementById('input-address').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') { e.preventDefault(); parseAddress(); }
+// Also catch paste anywhere on the page (clipboard images)
+document.addEventListener('paste', function(e) {
+  // Skip if the user is already pasting into the textarea — handled above
+  if (document.activeElement && document.activeElement.id === 'input-text') return;
+
+  var items = (e.clipboardData || window.clipboardData) && (e.clipboardData || window.clipboardData).items;
+  if (!items) return;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].kind === 'file' && items[i].type.indexOf('image/') === 0) {
+      e.preventDefault();
+      var blob = items[i].getAsFile();
+      if (blob) handleImageFile(blob);
+      return;
+    }
+  }
 });
-document.getElementById('input-plss').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') { e.preventDefault(); parsePLSS(); }
-});
+
 document.getElementById('origin-addr-input').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') { e.preventDefault(); saveOrigin(); }
 });
