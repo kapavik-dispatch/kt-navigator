@@ -667,16 +667,70 @@ function parseDirections() {
           source: 'pasted-address'
         });
       } else {
-        tryIntersectionFallback(text, jobName, fullDirections, addressCandidate);
+        tryRawGeocodeFallback(text, jobName, fullDirections);
       }
     }).catch(function() {
-      tryIntersectionFallback(text, jobName, fullDirections, addressCandidate);
+      tryRawGeocodeFallback(text, jobName, fullDirections);
     });
     return;
   }
 
-  // STEP 3: No address either — try to extract an intersection/landmark from turn-by-turn
+  // STEP 3: No clear address pattern — if the input is short (likely just a typed
+  // address without proper formatting), try geocoding the raw text directly.
+  // Geocoders are MUCH more forgiving than our regex.
+  if (text.length < 150 && /^\s*\d/.test(text)) {
+    // Starts with a number — probably an address even if missing state/zip
+    tryRawGeocodeFallback(text, jobName, fullDirections);
+    return;
+  }
+
+  // STEP 4: Longer text without coords or clear address — look for an intersection
   tryIntersectionFallback(text, jobName, fullDirections, null);
+}
+
+// Try geocoding the input as-is when our parser couldn't identify it cleanly.
+// Adds a Texas hint if no state is detected (since this app is Texas-focused).
+function tryRawGeocodeFallback(text, jobName, fullDirections) {
+  showLoading('Looking up location...');
+
+  // First attempt: raw text as-is
+  geocodeAddress(text).then(function(geo) {
+    if (geo) {
+      displayResult({
+        name: jobName || geo.displayName || text,
+        lat: geo.lat, lng: geo.lng,
+        rawLat: geo.lat.toFixed(6),
+        rawLng: geo.lng.toFixed(6),
+        directions: fullDirections,
+        source: 'raw-geocode'
+      });
+      return;
+    }
+
+    // Second attempt: append ", TX, USA" since this app is Texas-centric and most
+    // partial addresses are TX. If text already mentions a state, this won't help
+    // but won't hurt either — Nominatim will resolve to the right place.
+    var hasState = detectStateHint(text);
+    var augmented = hasState ? text : text + ', TX, USA';
+
+    return geocodeAddress(augmented).then(function(geo2) {
+      if (geo2) {
+        displayResult({
+          name: jobName || geo2.displayName || text,
+          lat: geo2.lat, lng: geo2.lng,
+          rawLat: geo2.lat.toFixed(6),
+          rawLng: geo2.lng.toFixed(6),
+          directions: fullDirections,
+          source: 'raw-geocode-augmented'
+        });
+      } else {
+        // Try intersection extraction as one more option
+        tryIntersectionFallback(text, jobName, fullDirections, text);
+      }
+    });
+  }).catch(function() {
+    tryIntersectionFallback(text, jobName, fullDirections, text);
+  });
 }
 
 // Try to find an intersection or landmark in turn-by-turn text and geocode it
@@ -748,50 +802,87 @@ function offerGoogleFallback(text, queryHint) {
 }
 
 // Extract a street-address-style pattern from text.
-// Strategy: look for "number + word(s) + city + 2-letter state" — let the geocoder
-// decide if the street type is valid. This catches Wind, Cove, Pass, Bend, Crossing,
-// Run, Park, Place, Hollow, and every other street suffix the field throws at us.
+// Strategy: cast a wide net — anything that LOOKS like an address (number + street stuff
+// + comma + city) gets returned. Let the geocoder validate. We accept addresses with
+// or without state, lowercase city names, and highway-style street names (SH, FM, CR, etc).
 function extractAddress(text) {
-  // US state list (covers all 50)
-  var STATE_RX = '(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New\\s+Hampshire|New\\s+Jersey|New\\s+Mexico|New\\s+York|North\\s+Carolina|North\\s+Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode\\s+Island|South\\s+Carolina|South\\s+Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West\\s+Virginia|Wisconsin|Wyoming)';
+  // US state — abbreviation MUST be uppercase (so "ia" inside "victoria" doesn't match
+  // Iowa), or the full state name (case-insensitive).
+  var STATE_ABBR = 'AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY';
+  var STATE_FULL = '(?:Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New\\s+Hampshire|New\\s+Jersey|New\\s+Mexico|New\\s+York|North\\s+Carolina|North\\s+Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode\\s+Island|South\\s+Carolina|South\\s+Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West\\s+Virginia|Wisconsin|Wyoming)';
+  var STATE_RX = '(?:(?:' + STATE_ABBR + ')|' + STATE_FULL + ')';
 
-  // Pattern A (permissive): "<number> <street words>, <city>, <ST> <zip?>"
-  // Doesn't require a specific street type — any word(s) between number and comma will do.
+  // PATTERN A (full address with state): build manually to keep state case-sensitive.
+  // We construct it without the 'i' flag for the state portion, but use case-insensitive
+  // matching for street and city by using explicit [A-Za-z] character classes everywhere.
+  // The state abbreviation is enforced as uppercase by the regex itself.
   var rxA = new RegExp(
-    '(\\d{1,6}\\s+' +                          // street number
-    '[A-Z][A-Za-z0-9.\\s\\-]{2,60}?' +         // street name (any words, non-greedy)
-    ',\\s*' +                                  // comma after street
-    '[A-Z][A-Za-z\\s\\-\\.]{1,40}?' +          // city
-    ',?\\s*' +                                 // optional comma
-    STATE_RX +                                 // state
-    '(?:\\s+\\d{5}(?:-\\d{4})?)?)' +           // optional zip
-    '\\b',
-    ''
+    '(\\d{1,6}\\s+' +                           // street number
+    '[A-Za-z][A-Za-z0-9.\\s\\-#/]{2,60}?' +     // street (any case)
+    ',\\s*' +                                   // REQUIRED comma after street
+    '[A-Za-z][A-Za-z\\s\\-\\.]{1,40}?' +        // city (any case)
+    '[,\\s]+' +                                 // REQUIRED comma or whitespace before state
+    STATE_RX +                                  // state (abbr uppercase OR full name)
+    '(?:\\s+\\d{5}(?:-\\d{4})?)?)' +            // optional zip
+    '(?:[^A-Za-z0-9]|$)'                        // state must be followed by non-alphanumeric
   );
   var fullAddr = text.match(rxA);
   if (fullAddr) return cleanAddress(fullAddr[1]);
 
-  // Pattern B: "<number> <street words> <city> <ST>" (no comma between street and city — looser)
-  // Requires a known street suffix to avoid false positives without commas
+  // PATTERN B (address WITHOUT state — common in casual texts/dispatches):
+  // "<number> <street>, <city>" — the comma is the key signal. Case-insensitive ok here.
   var rxB = new RegExp(
-    '(\\d{1,6}\\s+' +
-    '[A-Z][A-Za-z0-9.\\s\\-]{2,40}?\\s+' +
-    '(?:Rd|Road|St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway|Pkwy|Parkway|Ct|Court|Trail|Trl|Cir|Circle|Place|Pl|Park|Pass|Bend|Cove|Run|Crossing|Xing|Hollow|Ridge|Wind|Walk|Plaza|Square|Terrace|Ter|Loop)\\.?' +
-    '\\s+[A-Z][A-Za-z\\s\\-\\.]{1,40}?' +
-    ',?\\s+' + STATE_RX +
-    '(?:\\s+\\d{5})?)\\b',
-    ''
+    '(\\d{1,6}\\s+' +                          // street number
+    '[A-Za-z][A-Za-z0-9.\\s\\-#/]{2,60}?' +    // street
+    ',\\s*' +                                  // comma after street
+    '[A-Za-z][A-Za-z\\s\\-\\.]{2,40})' +       // city — at least 3 chars
+    '(?=[\\.,\\n]|$)',                         // ends at . , newline, or end
+    'i'
   );
-  var noCommaAddr = text.match(rxB);
+  var noStateAddr = text.match(rxB);
+  if (noStateAddr) {
+    var candidate = cleanAddress(noStateAddr[1]);
+    var afterComma = candidate.split(',')[1];
+    if (afterComma && !/\b(and|then|or|but|turn|follow|head|continue|travel|go|take|on|to)\b/i.test(afterComma)) {
+      return candidate;
+    }
+  }
+
+  // PATTERN C (no comma between street and city — looser, requires known street suffix):
+  var rxC = new RegExp(
+    '(\\d{1,6}\\s+' +
+    '[A-Za-z][A-Za-z0-9.\\s\\-]{2,40}?\\s+' +
+    '(?:Rd|Road|St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway|Pkwy|Parkway|Ct|Court|Trail|Trl|Cir|Circle|Place|Pl|Park|Pass|Bend|Cove|Run|Crossing|Xing|Hollow|Ridge|Wind|Walk|Plaza|Square|Terrace|Ter|Loop|SH|FM|CR|RR|Spur|Bypass|Expressway|Expwy)\\.?' +
+    '\\s+[A-Za-z][A-Za-z\\s\\-\\.]{1,40}?' +
+    '[,\\s]+' + STATE_RX +
+    '(?:\\s+\\d{5})?)' +
+    '(?:[^A-Za-z0-9]|$)',
+    'i'  // street suffix case-insensitive, but STATE_RX inside is still case-controlled
+  );
+  // Note: with 'i' flag the state abbreviations become case-insensitive again. Drop the flag
+  // and rely on STATE_FULL being multiword and STATE_ABBR being case-sensitive.
+  var rxC2 = new RegExp(
+    '(\\d{1,6}\\s+' +
+    '[A-Za-z][A-Za-z0-9.\\s\\-]{2,40}?\\s+' +
+    '(?:[Rr][Dd]|[Rr]oad|[Ss][Tt]|[Ss]treet|[Aa]ve|[Aa]venue|[Bb]lvd|[Bb]oulevard|[Dd]r|[Dd]rive|[Ll]n|[Ll]ane|[Ww]ay|[Hh]wy|[Hh]ighway|[Pp]kwy|[Pp]arkway|[Cc]t|[Cc]ourt|[Tt]rail|[Tt]rl|[Cc]ir|[Cc]ircle|[Pp]lace|[Pp]l|[Pp]ark|[Pp]ass|[Bb]end|[Cc]ove|[Rr]un|[Cc]rossing|[Xx]ing|[Hh]ollow|[Rr]idge|[Ww]ind|[Ww]alk|[Pp]laza|[Ss]quare|[Tt]errace|[Tt]er|[Ll]oop|SH|FM|CR|RR|[Ss]pur|[Bb]ypass|[Ee]xpressway|[Ee]xpwy)\\.?' +
+    '\\s+[A-Za-z][A-Za-z\\s\\-\\.]{1,40}?' +
+    '[,\\s]+' + STATE_RX +
+    '(?:\\s+\\d{5})?)' +
+    '(?:[^A-Za-z0-9]|$)'
+  );
+  var noCommaAddr = text.match(rxC2);
   if (noCommaAddr) return cleanAddress(noCommaAddr[1]);
 
-  // Pattern C: City + state alone (fallback — no street number)
-  var rxC = new RegExp('([A-Z][A-Za-z\\-\\.]+(?:\\s+[A-Z][A-Za-z\\-\\.]+){0,3}),?\\s+' + STATE_RX + '(?:\\s+\\d{5})?', '');
-  var cityState = text.match(rxC);
-  if (cityState && cityState[0].length > 6) {
-    // Avoid matching things like "Interstate 35" that just happen to capitalize
-    if (!/^(Interstate|Highway|Route|County|Farm|Ranch|State|US)\b/i.test(cityState[0])) {
-      return cleanAddress(cityState[0]);
+  // PATTERN D (city + state alone — no street number):
+  var rxD = new RegExp(
+    '([A-Za-z][A-Za-z\\-\\.]+(?:\\s+[A-Za-z][A-Za-z\\-\\.]+){0,3}[,\\s]+' + STATE_RX +
+    '(?:\\s+\\d{5})?)' +
+    '(?:[^A-Za-z0-9]|$)'
+  );
+  var cityState = text.match(rxD);
+  if (cityState && cityState[1].length > 6) {
+    if (!/^(Interstate|Highway|Route|County|Farm|Ranch|State|US|SH|FM|CR|RR|IH)\b/i.test(cityState[1])) {
+      return cleanAddress(cityState[1]);
     }
   }
 
@@ -835,27 +926,30 @@ function extractIntersection(text) {
   return null;
 }
 
-// Detect a US state mention to add context to geocoding queries
+// Detect a US state mention to add context to geocoding queries.
+// State abbreviations must be UPPERCASE (so "ia" inside "victoria" doesn't match
+// Iowa) and surrounded by non-letters. Full state names are case-insensitive.
 function detectStateHint(text) {
-  // Look for state abbreviation or name (common oilfield states first)
-  var states = {
-    'TX': /\b(?:TX|Texas)\b/i,
-    'OK': /\b(?:OK|Oklahoma)\b/i,
-    'NM': /\b(?:NM|New Mexico)\b/i,
-    'LA': /\b(?:LA|Louisiana)\b/i,
-    'CO': /\b(?:CO|Colorado)\b/i,
-    'WY': /\b(?:WY|Wyoming)\b/i,
-    'ND': /\b(?:ND|North Dakota)\b/i,
-    'PA': /\b(?:PA|Pennsylvania)\b/i,
-    'WV': /\b(?:WV|West Virginia)\b/i,
-    'KS': /\b(?:KS|Kansas)\b/i,
-    'UT': /\b(?:UT|Utah)\b/i,
-    'MT': /\b(?:MT|Montana)\b/i,
-    'CA': /\b(?:CA|California)\b/i,
-    'AK': /\b(?:AK|Alaska)\b/i
-  };
-  for (var st in states) {
-    if (states[st].test(text)) return st + ', USA';
+  var states = [
+    { code: 'TX', abbr: /(?:[^A-Za-z]|^)TX(?:[^A-Za-z]|$)/, full: /\bTexas\b/i },
+    { code: 'OK', abbr: /(?:[^A-Za-z]|^)OK(?:[^A-Za-z]|$)/, full: /\bOklahoma\b/i },
+    { code: 'NM', abbr: /(?:[^A-Za-z]|^)NM(?:[^A-Za-z]|$)/, full: /\bNew Mexico\b/i },
+    { code: 'LA', abbr: /(?:[^A-Za-z]|^)LA(?:[^A-Za-z]|$)/, full: /\bLouisiana\b/i },
+    { code: 'CO', abbr: /(?:[^A-Za-z]|^)CO(?:[^A-Za-z]|$)/, full: /\bColorado\b/i },
+    { code: 'WY', abbr: /(?:[^A-Za-z]|^)WY(?:[^A-Za-z]|$)/, full: /\bWyoming\b/i },
+    { code: 'ND', abbr: /(?:[^A-Za-z]|^)ND(?:[^A-Za-z]|$)/, full: /\bNorth Dakota\b/i },
+    { code: 'PA', abbr: /(?:[^A-Za-z]|^)PA(?:[^A-Za-z]|$)/, full: /\bPennsylvania\b/i },
+    { code: 'WV', abbr: /(?:[^A-Za-z]|^)WV(?:[^A-Za-z]|$)/, full: /\bWest Virginia\b/i },
+    { code: 'KS', abbr: /(?:[^A-Za-z]|^)KS(?:[^A-Za-z]|$)/, full: /\bKansas\b/i },
+    { code: 'UT', abbr: /(?:[^A-Za-z]|^)UT(?:[^A-Za-z]|$)/, full: /\bUtah\b/i },
+    { code: 'MT', abbr: /(?:[^A-Za-z]|^)MT(?:[^A-Za-z]|$)/, full: /\bMontana\b/i },
+    { code: 'CA', abbr: /(?:[^A-Za-z]|^)CA(?:[^A-Za-z]|$)/, full: /\bCalifornia\b/i },
+    { code: 'AK', abbr: /(?:[^A-Za-z]|^)AK(?:[^A-Za-z]|$)/, full: /\bAlaska\b/i }
+  ];
+  for (var i = 0; i < states.length; i++) {
+    if (states[i].abbr.test(text) || states[i].full.test(text)) {
+      return states[i].code + ', USA';
+    }
   }
   return null;
 }
