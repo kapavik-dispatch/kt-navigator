@@ -457,7 +457,7 @@ main {
     <div class="icon">🏭</div>
     <div class="info">
       <div class="label">Starting From</div>
-      <div class="name" id="origin-name">Balcones Quarry, New Braunfels</div>
+      <div class="name" id="origin-name">CEMEX (Balcones Quarry)</div>
     </div>
     <button class="edit-btn" onclick="useCurrentLocation()">📍 USE GPS</button>
   </div>
@@ -580,7 +580,7 @@ Examples:
     </div>
     <div class="modal-body">
       <label>Origin Name</label>
-      <input type="text" id="origin-name-input" placeholder="Balcones Quarry">
+      <input type="text" id="origin-name-input" placeholder="CEMEX">
       <label>Address or Coordinates</label>
       <input type="text" id="origin-addr-input" placeholder="2682 Wald Rd, New Braunfels, TX 78132">
       <div class="hint">Used as the default starting point for distance & ETA. Tap "📍 USE GPS" anytime to switch to your current location.</div>
@@ -624,7 +624,7 @@ var renameContext = null; // { type: 'fav'|'hist', id }
 var originOverride = null; // GPS coords when user taps USE GPS
 
 var DEFAULT_ORIGIN = {
-  name: 'Balcones Quarry, New Braunfels',
+  name: 'CEMEX (Balcones Quarry)',
   address: '2682 Wald Rd, New Braunfels, TX 78132',
   lat: 29.7519, lng: -98.2050 // Balcones Quarry approximate — refined on first geocode
 };
