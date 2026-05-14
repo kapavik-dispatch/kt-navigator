@@ -258,7 +258,36 @@ main {
 .nav-btn.primary { margin-top: 14px; }
 .nav-btn.apple { background: var(--blue); }
 .nav-btn.waze { background: #33ccff; color: var(--navy); }
-.nav-btn.view { background: var(--navy); font-size: 13px; padding: 12px; }
+.nav-btn.view { background: var(--navy); font-size: 13px; padding: 12px; margin-top: 14px; }
+
+/* Paired nav buttons — From Quarry / From Me */
+.nav-section-label {
+  font-size: 10px; font-weight: 800; color: #888; letter-spacing: 1.2px;
+  text-transform: uppercase; margin-top: 14px; margin-bottom: 6px;
+  padding-left: 2px;
+}
+.nav-pair { display: flex; gap: 8px; }
+.nav-btn-pair {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 3px; padding: 11px 6px;
+  border-radius: 8px; text-decoration: none;
+  font-family: 'IBM Plex Sans', sans-serif; font-weight: 800;
+  letter-spacing: 0.5px; cursor: pointer; transition: all 0.15s;
+  background: var(--green); color: white; min-height: 64px;
+}
+.nav-btn-pair:hover { filter: brightness(1.1); }
+.nav-btn-pair:active { transform: scale(0.97); }
+.nav-btn-pair .nav-icon { font-size: 20px; line-height: 1; }
+.nav-btn-pair .nav-text { font-size: 11px; line-height: 1.1; text-align: center; }
+
+/* Service-specific colors */
+.nav-btn-pair.apple { background: var(--blue); }
+.nav-btn-pair.waze { background: #33ccff; color: var(--navy); }
+
+/* "From Me" gets a slightly lighter/different shade to distinguish */
+.nav-btn-pair.from-me { background: #2a5a8a; }
+.nav-btn-pair.from-me.apple { background: #4a6a8a; }
+.nav-btn-pair.from-me.waze { background: #55ddff; }
 
 /* Directions text */
 .directions-text {
@@ -401,6 +430,9 @@ main {
   .input-body textarea { min-height: 110px; font-size: 14px; }
   .btn { padding: 11px 14px; font-size: 13px; }
   .nav-btn { font-size: 15px; padding: 13px; }
+  .nav-btn-pair { min-height: 60px; padding: 10px 4px; }
+  .nav-btn-pair .nav-icon { font-size: 18px; }
+  .nav-btn-pair .nav-text { font-size: 10px; }
   .parsed-label { min-width: 75px; }
   header h1 { font-size: 20px; }
   header .subtitle { display: none; }
@@ -894,10 +926,34 @@ function displayResult(r) {
   starBtn.innerHTML = isFav ? '★ SAVED' : '☆ SAVE';
 
   var lat = r.lat, lng = r.lng;
-  var navUrlGoogle = 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng;
-  var navUrlApple = 'https://maps.apple.com/?daddr=' + lat + ',' + lng;
-  var navUrlWaze = 'https://www.waze.com/ul?ll=' + lat + ',' + lng + '&navigate=yes';
+
+  // Build origin parameter for nav URLs — use the configured origin (Balcones Quarry by default)
+  var origin = getOrigin();
+  var originParam = '';
+  if (origin && origin.lat && origin.lng) {
+    originParam = origin.lat + ',' + origin.lng;
+  } else if (origin && origin.address) {
+    originParam = encodeURIComponent(origin.address);
+  }
+
+  // FROM QUARRY (or configured origin) — explicit origin
+  var navGoogleQuarry = 'https://www.google.com/maps/dir/?api=1&origin=' + originParam + '&destination=' + lat + ',' + lng;
+  var navAppleQuarry  = 'https://maps.apple.com/?saddr=' + originParam + '&daddr=' + lat + ',' + lng;
+  var navWazeQuarry   = 'https://www.waze.com/ul?from=ll.' + (origin.lat || 0) + ',' + (origin.lng || 0) + '&ll=' + lat + ',' + lng + '&navigate=yes';
+
+  // FROM ME — let the maps app use current GPS as origin (no origin param)
+  var navGoogleMe = 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng;
+  var navAppleMe  = 'https://maps.apple.com/?daddr=' + lat + ',' + lng;
+  var navWazeMe   = 'https://www.waze.com/ul?ll=' + lat + ',' + lng + '&navigate=yes';
+
   var viewUrl = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+
+  // For backward-compat (used elsewhere in copy/share)
+  var navUrlGoogle = navGoogleQuarry;
+
+  // Short label for the "From Quarry" buttons — uses just the first word of origin name
+  var originShort = (origin.name || 'Quarry').split(',')[0].split(' ')[0].toUpperCase();
+  if (originShort.length > 10) originShort = originShort.slice(0, 10);
 
   body.innerHTML =
     '<div id="eta-container"></div>' +
@@ -918,15 +974,34 @@ function displayResult(r) {
       '<div class="parsed-value" style="font-size:12px;color:#888;">' + escHtml(r.rawLat) + ' / ' + escHtml(r.rawLng) + '</div>' +
     '</div>' : '') +
 
-    '<a href="' + navUrlGoogle + '" target="_blank" class="nav-btn primary">' +
-      '<span class="arrow">🧭</span> NAVIGATE WITH GOOGLE MAPS' +
-    '</a>' +
-    '<a href="' + navUrlApple + '" target="_blank" class="nav-btn apple">' +
-      '<span class="arrow">🗺</span> NAVIGATE WITH APPLE MAPS' +
-    '</a>' +
-    '<a href="' + navUrlWaze + '" target="_blank" class="nav-btn waze">' +
+    // ── GOOGLE MAPS — paired buttons
+    '<div class="nav-section-label">Google Maps</div>' +
+    '<div class="nav-pair">' +
+      '<a href="' + navGoogleQuarry + '" target="_blank" class="nav-btn-pair from-quarry">' +
+        '<span class="nav-icon">🏭</span><span class="nav-text">FROM ' + escHtml(originShort) + '</span>' +
+      '</a>' +
+      '<a href="' + navGoogleMe + '" target="_blank" class="nav-btn-pair from-me">' +
+        '<span class="nav-icon">📍</span><span class="nav-text">FROM ME</span>' +
+      '</a>' +
+    '</div>' +
+
+    // ── APPLE MAPS — paired buttons
+    '<div class="nav-section-label">Apple Maps</div>' +
+    '<div class="nav-pair">' +
+      '<a href="' + navAppleQuarry + '" target="_blank" class="nav-btn-pair from-quarry apple">' +
+        '<span class="nav-icon">🏭</span><span class="nav-text">FROM ' + escHtml(originShort) + '</span>' +
+      '</a>' +
+      '<a href="' + navAppleMe + '" target="_blank" class="nav-btn-pair from-me apple">' +
+        '<span class="nav-icon">📍</span><span class="nav-text">FROM ME</span>' +
+      '</a>' +
+    '</div>' +
+
+    // ── WAZE — single button (Waze deep links always use current GPS as origin)
+    '<div class="nav-section-label">Waze <span style="font-weight:600;text-transform:none;color:#aab;">(always from current location)</span></div>' +
+    '<a href="' + navWazeMe + '" target="_blank" class="nav-btn waze">' +
       '<span class="arrow">🚗</span> NAVIGATE WITH WAZE' +
     '</a>' +
+
     '<a href="' + viewUrl + '" target="_blank" class="nav-btn view">' +
       '<span class="arrow">👁</span> VIEW ON MAP (no nav)' +
     '</a>' +
