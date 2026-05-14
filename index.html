@@ -406,22 +406,23 @@ main {
     <div class="input-header">
       <span class="icon" id="mode-icon">📋</span>
       <div>
-        <div class="title" id="mode-title">PASTE JOB DIRECTIONS</div>
-        <div class="subtitle" id="mode-subtitle">Conoco, ConocoPhillips, or any text with coordinates</div>
+        <div class="title" id="mode-title">PASTE ANYTHING</div>
+        <div class="subtitle" id="mode-subtitle">Coordinates, address, or turn-by-turn — auto-detects</div>
       </div>
     </div>
     <div class="input-body">
 
       <!-- PASTE MODE -->
       <div class="mode-panel active" id="panel-paste">
-        <textarea id="input-text" placeholder="Paste Conoco job directions here...
+        <textarea id="input-text" placeholder="Paste anything the field sends — coordinates, address, or turn-by-turn.
 
-Example:
-Jo Ann Esse Unit D1 : From the intersection of IH 37 & Farm Road 99, travel north on Farm Road 99 for 5.2 miles to County Road 271 on right...
-Latitude: 28 42' 57.655&quot; N Longitude: 98 8' 26.03&quot;"></textarea>
+Examples:
+• Jo Ann Esse Unit D1 : From the intersection of IH 37 &amp; Farm Road 99... Latitude: 28 42' 57.655&quot; N Longitude: 98 8' 26.03&quot;
+• 2682 Wald Rd, New Braunfels, TX 78132
+• Head north on FM 99 for 5.2 miles to CR 271, turn right..."></textarea>
         <div class="input-helper">
           <span class="pulse"></span>
-          <span>Auto-parses when you paste (or tap FIND)</span>
+          <span>Auto-detects coordinates, addresses, or intersections (or tap FIND)</span>
         </div>
       </div>
 
@@ -574,8 +575,8 @@ function setMode(mode) {
   var modeSub = document.getElementById('mode-subtitle');
 
   if (mode === 'paste') {
-    modeIcon.textContent = '📋'; modeTitle.textContent = 'PASTE JOB DIRECTIONS';
-    modeSub.textContent = 'Conoco, ConocoPhillips, or any text with coordinates';
+    modeIcon.textContent = '📋'; modeTitle.textContent = 'PASTE ANYTHING';
+    modeSub.textContent = 'Coordinates, address, or turn-by-turn — auto-detects';
     setTimeout(function(){ document.getElementById('input-text').focus(); }, 50);
   } else if (mode === 'address') {
     modeIcon.textContent = '🏠'; modeTitle.textContent = 'STREET ADDRESS';
@@ -603,33 +604,200 @@ function processInput() {
 
 function parseDirections() {
   var text = document.getElementById('input-text').value.trim();
-  if (!text) { toast('Paste directions first', 'error'); return; }
+  if (!text) { toast('Paste something first', 'error'); return; }
 
+  // STEP 1: Try coordinates first (fastest, no network)
   var result = extractCoordinates(text);
   var jobName = extractJobName(text);
-  var directions = extractDirectionsText(text);
+  var fullDirections = text; // preserve entire pasted text for the user
 
-  if (!result) {
-    showError('No coordinates found',
-      'Could not detect latitude/longitude in the pasted text.<br><br>' +
-      '<strong>Try these formats:</strong><br>' +
-      '• Latitude: 28 42\' 57.655" N Longitude: 98 8\' 26.03"<br>' +
-      '• 28.7160, -98.1406<br>' +
-      '• N 28° 42.961 W 098° 08.434<br>' +
-      '• 14R 388842 3179215 (UTM)<br>' +
-      '<div class="hint">Or try the ADDRESS or PLSS tab if you don\'t have coords.</div>');
+  if (result) {
+    displayResult({
+      name: jobName || 'Unknown Location',
+      lat: result.lat,
+      lng: result.lng,
+      rawLat: result.rawLat,
+      rawLng: result.rawLng,
+      directions: fullDirections,
+      source: 'pasted-coords'
+    });
     return;
   }
 
-  displayResult({
-    name: jobName || 'Unknown Location',
-    lat: result.lat,
-    lng: result.lng,
-    rawLat: result.rawLat,
-    rawLng: result.rawLng,
-    directions: directions,
-    source: 'pasted'
-  });
+  // STEP 2: No coords — try to find an address pattern in the text
+  var addressCandidate = extractAddress(text);
+  if (addressCandidate) {
+    showLoading('Looking up address from paste...');
+    geocodeAddress(addressCandidate).then(function(geo) {
+      if (geo) {
+        displayResult({
+          name: jobName || geo.displayName || addressCandidate,
+          lat: geo.lat,
+          lng: geo.lng,
+          rawLat: geo.lat.toFixed(6),
+          rawLng: geo.lng.toFixed(6),
+          directions: fullDirections,
+          source: 'pasted-address'
+        });
+      } else {
+        tryIntersectionFallback(text, jobName, fullDirections, addressCandidate);
+      }
+    }).catch(function() {
+      tryIntersectionFallback(text, jobName, fullDirections, addressCandidate);
+    });
+    return;
+  }
+
+  // STEP 3: No address either — try to extract an intersection/landmark from turn-by-turn
+  tryIntersectionFallback(text, jobName, fullDirections, null);
+}
+
+// Try to find an intersection or landmark in turn-by-turn text and geocode it
+function tryIntersectionFallback(text, jobName, fullDirections, addressTried) {
+  var intersection = extractIntersection(text);
+
+  if (intersection) {
+    showLoading('Looking up intersection: ' + intersection);
+    // Add state context if we can detect one in the text
+    var stateHint = detectStateHint(text);
+    var query = stateHint ? intersection + ', ' + stateHint : intersection;
+
+    geocodeAddress(query).then(function(geo) {
+      if (geo) {
+        displayResult({
+          name: jobName || 'Near ' + intersection,
+          lat: geo.lat,
+          lng: geo.lng,
+          rawLat: geo.lat.toFixed(6),
+          rawLng: geo.lng.toFixed(6),
+          directions: fullDirections,
+          source: 'pasted-intersection'
+        });
+      } else {
+        offerGoogleFallback(text, addressTried || intersection);
+      }
+    }).catch(function() {
+      offerGoogleFallback(text, addressTried || intersection);
+    });
+  } else {
+    offerGoogleFallback(text, addressTried);
+  }
+}
+
+// Last resort: offer to hand the raw text to Google Maps directly
+function offerGoogleFallback(text, queryHint) {
+  hideResult();
+  var section = document.getElementById('result-section');
+  var body = document.getElementById('result-body');
+  var title = document.getElementById('result-title');
+
+  // Use the most promising query for Google
+  var query = queryHint || text.split(/[\r\n]+/)[0].slice(0, 200);
+  var googleUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query);
+  var googleNavUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(query);
+
+  section.className = 'result-section show error';
+  title.textContent = '⚠ COULD NOT AUTO-PARSE';
+  document.getElementById('star-btn').style.display = 'none';
+
+  body.innerHTML = '<div class="error-msg">' +
+    'Could not detect coordinates, address, or intersection in the pasted text.<br><br>' +
+    '<strong>Try one of these:</strong>' +
+    '</div>' +
+    '<a href="' + googleNavUrl + '" target="_blank" class="nav-btn primary">' +
+      '<span class="arrow">🧭</span> SEND RAW TEXT TO GOOGLE MAPS' +
+    '</a>' +
+    '<a href="' + googleUrl + '" target="_blank" class="nav-btn view">' +
+      '<span class="arrow">🔍</span> SEARCH ON GOOGLE MAPS' +
+    '</a>' +
+    '<div class="section-label" style="margin-top:16px;">Or try the other tabs:</div>' +
+    '<div style="font-size:13px;color:#555;line-height:1.6;padding:4px 0;">' +
+      '• <strong>ADDRESS tab</strong> for a clean street address<br>' +
+      '• <strong>PLSS tab</strong> for Section-Township-Range<br>' +
+      '• Ask the field to include lat/long if possible' +
+    '</div>' +
+    '<div class="section-label">What you pasted:</div>' +
+    '<div class="directions-text">' + escHtml(text.slice(0, 600)) + (text.length > 600 ? '...' : '') + '</div>';
+}
+
+// Extract a street-address-style pattern from text
+function extractAddress(text) {
+  // Pattern A: "1234 Street Name, City, ST 12345" (standard US address)
+  var fullAddr = text.match(/(\d{1,6}\s+[A-Z][A-Za-z0-9.\s]{2,40}(?:Rd|Road|St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway|Pkwy|Parkway|Ct|Court|Trail|Trl|Cir|Circle|FM|CR|County\s+Road|Ranch\s+Road|Farm\s+Road|RR|Route)\.?(?:\s+\w+)?,?\s*[A-Z][A-Za-z\s]{2,30}(?:,\s*)?[A-Z]{2}(?:\s+\d{5})?)/);
+  if (fullAddr) return fullAddr[1].trim();
+
+  // Pattern B: "1234 Street Name, City ST" without zip
+  var noZip = text.match(/(\d{1,6}\s+[A-Z][A-Za-z0-9.\s]{2,40}(?:Rd|Road|St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway|Pkwy|Parkway|Ct|Court|Trail|Trl|Cir|Circle)\.?,?\s+[A-Z][A-Za-z\s]{2,30},?\s+[A-Z]{2})\b/);
+  if (noZip) return noZip[1].trim();
+
+  // Pattern C: A city + state at end of a line (less reliable but useful)
+  var cityState = text.match(/([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)?,?\s+(?:TX|Texas|OK|Oklahoma|NM|New\s+Mexico|LA|Louisiana|CO|Colorado|WY|Wyoming|ND|North\s+Dakota|PA|Pennsylvania|WV|West\s+Virginia|KS|Kansas|UT|Utah|MT|Montana|CA|California|AK|Alaska))(?:\s+\d{5})?/);
+  if (cityState) {
+    // Look for a street/number before it on the same line or nearby
+    var idx = text.indexOf(cityState[1]);
+    var lookback = text.slice(Math.max(0, idx - 80), idx);
+    var withStreet = lookback.match(/(\d{1,6}\s+[A-Z][A-Za-z0-9.\s]{2,40}(?:Rd|Road|St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Hwy|Highway))\.?\s*,?\s*$/);
+    if (withStreet) return (withStreet[1] + ', ' + cityState[1]).trim();
+  }
+
+  return null;
+}
+
+// Extract an intersection/landmark from turn-by-turn text — typically the FINAL/destination intersection
+function extractIntersection(text) {
+  // Try to find the LAST intersection mentioned — usually closest to destination
+  // Pattern: "Road1 & Road2" or "Road1 and Road2" or "intersection of X and Y"
+  var intersections = [];
+
+  // Pattern A: explicit "intersection of X and/& Y"
+  var rxA = /intersection of ([^.,;\n]{3,60}?)\s+(?:and|&)\s+([^.,;\n]{3,60})/gi;
+  var m;
+  while ((m = rxA.exec(text)) !== null) {
+    intersections.push((m[1] + ' & ' + m[2]).trim());
+  }
+
+  // Pattern B: "X & Y" or "X and Y" where both look road-like (FM, CR, US, IH, SH, RR + number, or capitalized words)
+  var rxB = /\b((?:FM|CR|US|IH|I-|SH|TX|RR|Hwy|Highway|County Road|Ranch Road|Farm Road|State Highway)\s*[-]?\s*\d{1,4}[A-Z]?)\s+(?:and|&)\s+((?:FM|CR|US|IH|I-|SH|TX|RR|Hwy|Highway|County Road|Ranch Road|Farm Road|State Highway)\s*[-]?\s*\d{1,4}[A-Z]?)\b/gi;
+  while ((m = rxB.exec(text)) !== null) {
+    intersections.push((m[1] + ' & ' + m[2]).trim());
+  }
+
+  // Pattern C: "turn ... onto ROAD" — grab the last named road as a fallback
+  var rxC = /(?:turn|head|go|continue|follow|take|onto|on)\s+(?:right|left|north|south|east|west|northwest|northeast|southwest|southeast)?\s*(?:on(?:to)?\s+)?((?:FM|CR|US|IH|I-|SH|TX|RR|Hwy|Highway|County Road|Ranch Road|Farm Road|State Highway)\s*[-]?\s*\d{1,4}[A-Z]?)/gi;
+  var lastRoad = null;
+  while ((m = rxC.exec(text)) !== null) {
+    lastRoad = m[1].trim();
+  }
+
+  // Prefer intersections (last one = closest to destination), then fall back to last named road
+  if (intersections.length > 0) return intersections[intersections.length - 1];
+  if (lastRoad) return lastRoad;
+  return null;
+}
+
+// Detect a US state mention to add context to geocoding queries
+function detectStateHint(text) {
+  // Look for state abbreviation or name (common oilfield states first)
+  var states = {
+    'TX': /\b(?:TX|Texas)\b/i,
+    'OK': /\b(?:OK|Oklahoma)\b/i,
+    'NM': /\b(?:NM|New Mexico)\b/i,
+    'LA': /\b(?:LA|Louisiana)\b/i,
+    'CO': /\b(?:CO|Colorado)\b/i,
+    'WY': /\b(?:WY|Wyoming)\b/i,
+    'ND': /\b(?:ND|North Dakota)\b/i,
+    'PA': /\b(?:PA|Pennsylvania)\b/i,
+    'WV': /\b(?:WV|West Virginia)\b/i,
+    'KS': /\b(?:KS|Kansas)\b/i,
+    'UT': /\b(?:UT|Utah)\b/i,
+    'MT': /\b(?:MT|Montana)\b/i,
+    'CA': /\b(?:CA|California)\b/i,
+    'AK': /\b(?:AK|Alaska)\b/i
+  };
+  for (var st in states) {
+    if (states[st].test(text)) return st + ', USA';
+  }
+  return null;
 }
 
 function parseAddress() {
