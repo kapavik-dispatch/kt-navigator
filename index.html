@@ -626,7 +626,7 @@ var originOverride = null; // GPS coords when user taps USE GPS
 var DEFAULT_ORIGIN = {
   name: 'CEMEX (Balcones Quarry)',
   address: '2682 Wald Rd, New Braunfels, TX 78132',
-  lat: 29.7519, lng: -98.2050 // Balcones Quarry approximate — refined on first geocode
+  lat: null, lng: null  // will be geocoded on first use — never hard-code
 };
 
 function parseDirections() {
@@ -927,19 +927,24 @@ function displayResult(r) {
 
   var lat = r.lat, lng = r.lng;
 
-  // Build origin parameter for nav URLs — use the configured origin (Balcones Quarry by default)
+  // Build origin parameter for nav URLs.
+  // STRATEGY: prefer the address string over coordinates. Mapping apps geocode
+  // the address themselves and route to the correct front door, which is more
+  // reliable than passing approximate coordinates.
   var origin = getOrigin();
   var originParam = '';
-  if (origin && origin.lat && origin.lng) {
-    originParam = origin.lat + ',' + origin.lng;
-  } else if (origin && origin.address) {
+  var originParamApple = '';  // Apple Maps uses saddr=address+separated+by+plus
+  if (origin && origin.address) {
     originParam = encodeURIComponent(origin.address);
+    originParamApple = encodeURIComponent(origin.address);
+  } else if (origin && origin.lat && origin.lng) {
+    originParam = origin.lat + ',' + origin.lng;
+    originParamApple = origin.lat + ',' + origin.lng;
   }
 
-  // FROM QUARRY (or configured origin) — explicit origin
+  // FROM ORIGIN (e.g. CEMEX) — explicit origin
   var navGoogleQuarry = 'https://www.google.com/maps/dir/?api=1&origin=' + originParam + '&destination=' + lat + ',' + lng;
-  var navAppleQuarry  = 'https://maps.apple.com/?saddr=' + originParam + '&daddr=' + lat + ',' + lng;
-  var navWazeQuarry   = 'https://www.waze.com/ul?from=ll.' + (origin.lat || 0) + ',' + (origin.lng || 0) + '&ll=' + lat + ',' + lng + '&navigate=yes';
+  var navAppleQuarry  = 'https://maps.apple.com/?saddr=' + originParamApple + '&daddr=' + lat + ',' + lng;
 
   // FROM ME — let the maps app use current GPS as origin (no origin param)
   var navGoogleMe = 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng;
@@ -951,7 +956,7 @@ function displayResult(r) {
   // For backward-compat (used elsewhere in copy/share)
   var navUrlGoogle = navGoogleQuarry;
 
-  // Short label for the "From Quarry" buttons — uses just the first word of origin name
+  // Short label for the "FROM ORIGIN" buttons — first word of origin name, uppercased
   var originShort = (origin.name || 'Quarry').split(',')[0].split(' ')[0].toUpperCase();
   if (originShort.length > 10) originShort = originShort.slice(0, 10);
 
@@ -1112,6 +1117,27 @@ function formatDuration(min) {
    ═══════════════════════════════════════════════════════════════ */
 function loadOrigin() {
   var stored = JSON.parse(localStorage.getItem('kt_nav_origin') || 'null');
+
+  // Migration: clear stale bad coordinates from earlier app versions.
+  // Previous versions hard-coded approximate coords that pointed to wrong locations.
+  // If the stored origin has the OLD default name and stale coords, reset it.
+  if (stored && stored.address === '2682 Wald Rd, New Braunfels, TX 78132' &&
+      stored.lat && Math.abs(stored.lat - 29.7519) < 0.01 &&
+      Math.abs(stored.lng - (-98.2050)) < 0.01) {
+    // Stale — wipe coords so they'll be re-geocoded fresh
+    stored.lat = null;
+    stored.lng = null;
+    stored.name = 'CEMEX (Balcones Quarry)';  // also fix the name
+    localStorage.setItem('kt_nav_origin', JSON.stringify(stored));
+  }
+  // Migration: also clear any other stored origin that had the old "Balcones Quarry, New Braunfels" name
+  if (stored && stored.name === 'Balcones Quarry, New Braunfels') {
+    stored.name = 'CEMEX (Balcones Quarry)';
+    stored.lat = null;
+    stored.lng = null;
+    localStorage.setItem('kt_nav_origin', JSON.stringify(stored));
+  }
+
   if (!stored) {
     localStorage.setItem('kt_nav_origin', JSON.stringify(DEFAULT_ORIGIN));
     stored = DEFAULT_ORIGIN;
