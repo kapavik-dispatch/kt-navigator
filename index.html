@@ -594,7 +594,7 @@ var originOverride = null; // GPS coords when user taps USE GPS
 var DEFAULT_ORIGIN = {
   name: 'Balcones Quarry, New Braunfels',
   address: '2682 Wald Rd, New Braunfels, TX 78132',
-  lat: 29.7831, lng: -98.1245 // approximate, will be refined on first lookup
+  lat: 29.7519, lng: -98.2050 // Balcones Quarry approximate — refined on first geocode
 };
 
 function parseDirections() {
@@ -1106,7 +1106,8 @@ function useCurrentLocation() {
 function extractCoordinates(text) {
 
   // Pattern 1: DMS with labels — Latitude: 28 42' 57.655" N Longitude: 98 8' 26.03"
-  var dmsLabeled = text.match(/Lat(?:itude)?[:\s]*(\d{1,3})[\s°]+(\d{1,2})['\u2019\u2032\s]+([0-9.]+)["\u201D\u2033]?\s*([NSns])\s*(?:[,;/|&\s]*)?Lon(?:gitude)?[:\s]*(\d{1,3})[\s°]+(\d{1,2})['\u2019\u2032\s]+([0-9.]+)["\u201D\u2033]?\s*([EWew])?/i);
+  // Inner separator accepts ' \u2019 \u2032 \u00B0 (degree) or whitespace — OCR sometimes substitutes °
+  var dmsLabeled = text.match(/Lat(?:itude)?[:\s]*(\d{1,3})[\s\u00B0]+(\d{1,2})[\s'\u2019\u2032\u00B0]+([0-9.]+)["\u201D\u2033\u00B0]?\s*([NSns])\s*(?:[,;/|&\s]*)?Lon(?:gitude)?[:\s]*(\d{1,3})[\s\u00B0]+(\d{1,2})[\s'\u2019\u2032\u00B0]+([0-9.]+)["\u201D\u2033\u00B0]?\s*([EWew])?/i);
   if (dmsLabeled) {
     var lat = dmsToDecimal(dmsLabeled[1], dmsLabeled[2], dmsLabeled[3], dmsLabeled[4]);
     var lng = dmsToDecimal(dmsLabeled[5], dmsLabeled[6], dmsLabeled[7], dmsLabeled[8] || 'W');
@@ -1115,8 +1116,8 @@ function extractCoordinates(text) {
              rawLng: dmsLabeled[5] + '° ' + dmsLabeled[6] + "' " + dmsLabeled[7] + '" ' + (dmsLabeled[8] || 'W') };
   }
 
-  // Pattern 2: DMS without labels
-  var dmsPlain = text.match(/(\d{1,3})[\s°]+(\d{1,2})['\u2019\u2032\s]+([0-9.]+)["\u201D\u2033]?\s*([NSns])\s*[,;/|\s]+(\d{1,3})[\s°]+(\d{1,2})['\u2019\u2032\s]+([0-9.]+)["\u201D\u2033]?\s*([EWew])/i);
+  // Pattern 2: DMS without labels — also accepts ° as inner separator
+  var dmsPlain = text.match(/(\d{1,3})[\s\u00B0]+(\d{1,2})[\s'\u2019\u2032\u00B0]+([0-9.]+)["\u201D\u2033\u00B0]?\s*([NSns])\s*[,;/|\s]+(\d{1,3})[\s\u00B0]+(\d{1,2})[\s'\u2019\u2032\u00B0]+([0-9.]+)["\u201D\u2033\u00B0]?\s*([EWew])/i);
   if (dmsPlain) {
     var lat = dmsToDecimal(dmsPlain[1], dmsPlain[2], dmsPlain[3], dmsPlain[4]);
     var lng = dmsToDecimal(dmsPlain[5], dmsPlain[6], dmsPlain[7], dmsPlain[8]);
@@ -1136,7 +1137,7 @@ function extractCoordinates(text) {
   }
 
   // Pattern 4: Decimal with labels
-  var decLabeled = text.match(/Lat(?:itude)?[:\s]*(-?\d{1,3}\.\d+)\s*[,;/|\s]*Lon(?:gitude)?[:\s]*(-?\d{1,3}\.\d+)/i);
+  var decLabeled = text.match(/Lat(?:itude)?[:\s]*(-?\d{1,3}\.\d+)\s*[,;/|\s]*Lon(?:g(?:itude)?)?[:\s]*(-?\d{1,3}\.\d+)/i);
   if (decLabeled) {
     return { lat: parseFloat(decLabeled[1]), lng: parseFloat(decLabeled[2]),
              rawLat: decLabeled[1], rawLng: decLabeled[2] };
@@ -1700,66 +1701,64 @@ function hideOCRProgress() {
   document.getElementById('ocr-progress-fill').style.width = '0%';
 }
 
-// Clean OCR output — fix common character recognition mistakes in coordinate text
+// Clean OCR output — fix common character recognition mistakes in coordinate text.
+// Conservative: only fixes characters inside CLEARLY numeric coordinate contexts,
+// never touches surrounding prose.
 function cleanOCRText(text) {
   if (!text) return '';
   var cleaned = text;
 
-  // Normalize various quote / apostrophe / prime characters into standard ones
+  // 1. Normalize various quote / apostrophe / prime / dash characters
   cleaned = cleaned.replace(/[\u2018\u2019\u2032\u02B9\u02BC`´]/g, "'");      // smart quotes / primes → '
   cleaned = cleaned.replace(/[\u201C\u201D\u2033\u02BA]/g, '"');              // smart double quotes → "
   cleaned = cleaned.replace(/[\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-');  // various dashes → -
-  cleaned = cleaned.replace(/[\u00BA\u00B0]/g, '°');                          // normalize degree variants → °
+  cleaned = cleaned.replace(/[\u00BA]/g, '\u00B0');                            // º → °
 
-  // Fix mangled words BEFORE numeric cleanup (so e.g. "Latltude" → "Latitude")
-  cleaned = cleaned.replace(/L\s*a\s*t\s*[il1|]\s*t\s*u\s*d\s*e/gi, 'Latitude');
-  cleaned = cleaned.replace(/L\s*o\s*n\s*g\s*[il1|]\s*t\s*u\s*d\s*e/gi, 'Longitude');
-  cleaned = cleaned.replace(/\bLat\s*[:;]\s*/gi, 'Lat: ');
-  cleaned = cleaned.replace(/\bLong?\s*[:;]\s*/gi, 'Long: ');
+  // 2. Fix mangled "Latitude" / "Longitude" words BEFORE any numeric cleanup,
+  //    but DO NOT use \s between letters since that destroys "Long: -98" style input.
+  //    Only fix when the letter substitution is obvious (1/l/I/| inside the word).
+  cleaned = cleaned.replace(/\bLat[il1|]tude\b/gi, 'Latitude');
+  cleaned = cleaned.replace(/\bLong[il1|]tude\b/gi, 'Longitude');
 
-  // In numeric coordinate contexts only, fix OCR letter→digit confusions.
-  // Match a sequence that LOOKS like coords: starts/ends with N/S/E/W or has degree marks
+  // 3. Helper: fix common OCR digit confusions inside a numeric-looking substring.
+  //    Only converts letters when they are surrounded by digits or coord punctuation.
+  function fixDigits(s) {
+    return s
+      .replace(/O/g, '0')      // O → 0 (uppercase only — lowercase o is too common in real words)
+      .replace(/[lI|](?=\d)|(?<=\d)[lI|]/g, '1')  // l/I/| next to a digit → 1
+      .replace(/B(?=\d)|(?<=\d)B/g, '8')          // B next to a digit → 8
+      .replace(/Z(?=\d)|(?<=\d)Z/g, '2');         // Z next to a digit → 2
+  }
+
+  // 4. Fix coord clusters that END with N/S/E/W (latitude or stand-alone coord).
+  //    The cluster must look like a coordinate: contain digits AND have degree/quote
+  //    marks OR be at least 4 chars of digits. Case-sensitive on the OCR letters
+  //    (uppercase O/I/B/Z) to avoid eating lowercase prose.
   cleaned = cleaned.replace(
-    /(\b\d[\dOlISBZo\s°'"\.\-]{3,40}["'°]?\s*[NSEW]\b)/gi,
-    function(match) {
-      return match
-        .replace(/[Oo]/g, '0')
-        .replace(/[lI|]/g, '1')
-        .replace(/B(?=\d)|(?<=\d)B/g, '8')
-        .replace(/Z(?=\d)|(?<=\d)Z/g, '2')
-        .replace(/S(?=\d)|(?<=\d)S(?![EW])/g, '5');
+    /([0-9OIBZ][0-9OIBZ\s\u00B0'"\.\-]{3,40}["'\u00B0]?\s*)([NSEW])(?![A-Za-z])/g,
+    function(_, nums, dir) {
+      return fixDigits(nums) + dir;
     }
   );
 
-  // Clean coordinate clusters that START with N/S/E/W (the second coord of a pair)
+  // 5. Fix coord clusters that START with N/S/E/W (the second coord of a pair).
   cleaned = cleaned.replace(
-    /(\b[NSEW]\s*\d[\dOlISBZo\s°'"\.\-]{3,40}["'°]?)/gi,
-    function(match) {
-      return match
-        .replace(/([NSEW])(\s*)([\dOlISBZo\s°'"\.\-]+)$/i, function(_, dir, sp, nums) {
-          var cleanedNums = nums
-            .replace(/[Oo]/g, '0')
-            .replace(/[lI|]/g, '1')
-            .replace(/B(?=\d)|(?<=\d)B/g, '8')
-            .replace(/Z(?=\d)|(?<=\d)Z/g, '2');
-          return dir + sp + cleanedNums;
-        });
+    /(?<![A-Za-z])([NSEW])(\s*)([0-9OIBZ][0-9OIBZ\s\u00B0'"\.\-]{3,40}["'\u00B0]?)/g,
+    function(_, dir, sp, nums) {
+      return dir + sp + fixDigits(nums);
     }
   );
 
-  // Clean numeric clusters following an explicit Lat/Long label
+  // 6. Fix coord clusters that follow "Lat:" or "Latitude:" / "Long:" / "Longitude:".
+  //    Stop the numeric capture at the next letter to avoid eating into a following word.
   cleaned = cleaned.replace(
-    /((?:Latitude|Longitude|Lat|Long)\s*[:;]?\s*)([\dOlISBZo\s°'"\.\-]{3,40})/gi,
-    function(match, label, nums) {
-      return label + nums
-        .replace(/[Oo]/g, '0')
-        .replace(/[lI|]/g, '1')
-        .replace(/B(?=\d)|(?<=\d)B/g, '8')
-        .replace(/Z(?=\d)|(?<=\d)Z/g, '2');
+    /\b(Lat(?:itude)?|Long(?:itude)?)(\s*[:;]?\s*)([\-0-9OIBZ][0-9OIBZ\s\u00B0'"\.\-]{2,40})(?=[^0-9OIBZ\s\u00B0'"\.\-]|$)/g,
+    function(_, label, sep, nums) {
+      return label + sep + fixDigits(nums);
     }
   );
 
-  // Collapse excessive whitespace but preserve line breaks
+  // 7. Collapse excessive whitespace but preserve line breaks
   cleaned = cleaned.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 
   return cleaned;
