@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1b2a">
+<title>KT Job Navigator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0d1b2a;
+  --blue: #1a3a5c;
+  --accent: #e8a020;
+  --accent-dark: #d08a10;
+  --red: #c0392b;
+  --green: #1a7a3a;
+  --purple: #5b3a7a;
+  --light: #f4f6f9;
+  --text: #1a2a3a;
+  --muted: #8893a6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--light); color: var(--text); display: flex; flex-direction: column; -webkit-tap-highlight-color: transparent; }
+
+/* HEADER */
+header {
+  background: var(--navy); color: white;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; height: 54px; border-bottom: 3px solid var(--accent);
+  flex-shrink: 0; position: sticky; top: 0; z-index: 50;
+}
+header .brand { display: flex; align-items: baseline; gap: 8px; }
+header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--accent); }
+header .subtitle { font-size: 10px; color: #8ab; letter-spacing: 0.5px; }
+header .header-btn {
+  background: transparent; border: 1.5px solid #2a4a6a;
+  color: #cde; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 6px 10px; border-radius: 5px; cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+header .header-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* MAIN */
+main {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 16px; overflow-y: auto;
+}
+.container { width: 100%; max-width: 700px; }
+
+/* ORIGIN BANNER */
+.origin-banner {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+  border-radius: 10px; padding: 12px 16px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 12px;
+  border-left: 4px solid var(--accent);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+.origin-banner .icon { font-size: 22px; }
+.origin-banner .info { flex: 1; min-width: 0; }
+.origin-banner .label { font-size: 9px; font-weight: 800; letter-spacing: 1.2px; color: var(--accent); text-transform: uppercase; }
+.origin-banner .name { font-size: 13px; font-weight: 700; color: white; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.origin-banner .edit-btn {
+  background: rgba(232,160,32,0.15); border: 1px solid var(--accent);
+  color: var(--accent); padding: 6px 10px; border-radius: 5px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.5px; cursor: pointer;
+}
+.origin-banner .edit-btn:hover { background: var(--accent); color: var(--navy); }
+
+/* MODE TABS */
+.mode-tabs {
+  display: flex; gap: 4px; background: #e1e6ed; border-radius: 8px;
+  padding: 4px; margin-bottom: 12px;
+}
+.mode-tab {
+  flex: 1; padding: 10px 8px; border: none; background: transparent;
+  font-family: 'IBM Plex Sans', sans-serif; font-weight: 700;
+  font-size: 12px; letter-spacing: 0.5px; color: #667;
+  border-radius: 6px; cursor: pointer; transition: all 0.15s;
+  text-transform: uppercase;
+}
+.mode-tab.active {
+  background: white; color: var(--navy); box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* INPUT SECTION */
+.input-section {
+  background: white; border-radius: 10px; border: 2px solid #dde;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow: hidden; margin-bottom: 14px;
+}
+.input-header {
+  background: var(--navy); padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.input-header .icon { font-size: 22px; }
+.input-header .title { font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: 1.5px; color: var(--accent); }
+.input-header .subtitle { font-size: 10px; color: #8ab; letter-spacing: 0.3px; }
+
+.input-body { padding: 14px 16px; }
+.input-body textarea, .input-body input[type="text"] {
+  width: 100%; border: 2px solid #ccd; border-radius: 8px;
+  padding: 12px 14px; font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px; line-height: 1.5; color: var(--text); resize: vertical;
+  outline: none; transition: border-color 0.2s; background: white;
+}
+.input-body textarea { min-height: 120px; }
+.input-body textarea:focus, .input-body input[type="text"]:focus { border-color: var(--accent); }
+.input-body textarea::placeholder, .input-body input::placeholder { color: #aab; }
+
+.input-helper {
+  font-size: 11px; color: var(--muted); margin-top: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.input-helper .pulse {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.btn-row { display: flex; gap: 8px; margin-top: 12px; }
+.btn {
+  padding: 12px 20px; border-radius: 6px; border: none;
+  font-family: 'IBM Plex Sans', sans-serif; font-weight: 800;
+  font-size: 13px; letter-spacing: 0.5px; cursor: pointer; transition: all 0.15s;
+}
+.btn-find { flex: 1; background: var(--accent); color: var(--navy); }
+.btn-find:hover { background: var(--accent-dark); }
+.btn-find:active { transform: scale(0.98); }
+.btn-find:disabled { background: #ccc; cursor: wait; color: #888; }
+.btn-clear { background: #eef; color: #666; border: 1.5px solid #ccd; }
+.btn-clear:hover { background: #dde; }
+
+/* RESULT SECTION */
+.result-section {
+  display: none; background: white; border-radius: 10px;
+  border: 2px solid var(--green); box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  overflow: hidden; margin-bottom: 14px;
+  animation: slideIn 0.3s ease;
+}
+.result-section.show { display: block; }
+.result-section.error { border-color: var(--red); }
+.result-section.loading { border-color: var(--accent); }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.result-header {
+  background: var(--green); padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.result-section.error .result-header { background: var(--red); }
+.result-section.loading .result-header { background: var(--accent); }
+.result-header .title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1.5px; color: white; }
+.result-header .star-btn {
+  background: rgba(255,255,255,0.2); border: 1.5px solid white;
+  color: white; padding: 4px 10px; border-radius: 4px;
+  font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px;
+}
+.result-header .star-btn:hover { background: white; color: var(--green); }
+.result-header .star-btn.starred { background: var(--accent); border-color: var(--accent); color: var(--navy); }
+
+.result-body { padding: 16px; }
+
+/* ETA badge */
+.eta-badge {
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(135deg, #1a3a5c 0%, #0d1b2a 100%);
+  border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;
+  color: white;
+}
+.eta-badge .eta-stat { flex: 1; }
+.eta-badge .eta-label { font-size: 9px; font-weight: 800; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; }
+.eta-badge .eta-value { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 700; color: white; margin-top: 2px; }
+.eta-badge .eta-value.loading { color: #889; font-size: 13px; font-style: italic; }
+.eta-badge .divider { width: 1px; align-self: stretch; background: rgba(255,255,255,0.15); }
+
+/* Parsed data display */
+.parsed-field {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid #eef;
+}
+.parsed-field:last-child { border-bottom: none; }
+.parsed-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 1px;
+  color: #888; text-transform: uppercase; min-width: 90px; padding-top: 2px;
+}
+.parsed-value {
+  font-size: 14px; font-weight: 600; color: var(--text); flex: 1;
+  word-break: break-word; line-height: 1.5;
+}
+.parsed-value.coords {
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  color: var(--blue); font-weight: 700;
+}
+.parsed-value.jobname { font-size: 16px; font-weight: 800; color: var(--navy); }
+
+/* Navigate buttons */
+.nav-btn {
+  display: flex; width: 100%; margin-top: 10px; padding: 14px;
+  background: var(--green); color: white; border: none;
+  border-radius: 8px; font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 16px; font-weight: 800; letter-spacing: 0.8px;
+  cursor: pointer; transition: all 0.15s; align-items: center;
+  justify-content: center; gap: 10px; text-decoration: none;
+}
+.nav-btn:hover { filter: brightness(1.1); }
+.nav-btn:active { transform: scale(0.98); }
+.nav-btn .arrow { font-size: 20px; }
+.nav-btn.primary { margin-top: 14px; }
+.nav-btn.apple { background: var(--blue); }
+.nav-btn.waze { background: #33ccff; color: var(--navy); }
+.nav-btn.view { background: var(--navy); font-size: 13px; padding: 12px; }
+
+/* Directions text */
+.directions-text {
+  background: #f8f9fc; border: 1.5px solid #dde; border-radius: 6px;
+  padding: 11px 13px; font-size: 13px; line-height: 1.65; color: #444;
+  white-space: pre-wrap; word-wrap: break-word; margin-top: 10px;
+}
+.section-label {
+  font-size: 10px; font-weight: 800; color: #888; letter-spacing: 1px;
+  margin: 14px 0 6px; text-transform: uppercase;
+}
+
+/* Action buttons */
+.action-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.action-btn {
+  padding: 8px 12px; background: var(--navy); color: white;
+  border: none; border-radius: 5px; font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px;
+  transition: all 0.15s;
+}
+.action-btn:hover { background: var(--blue); }
+.action-btn.copied { background: var(--green); }
+.action-btn.share { background: var(--purple); }
+.action-btn.share:hover { background: #6a4a8a; }
+
+/* Error message */
+.error-msg {
+  font-size: 14px; color: var(--red); line-height: 1.6; padding: 6px 0;
+}
+.error-msg .hint { font-size: 12px; color: #888; margin-top: 8px; }
+
+/* EXAMPLES */
+.examples {
+  background: white; border-radius: 10px; border: 1px solid #dde;
+  padding: 14px 16px; margin-bottom: 14px;
+}
+.examples summary {
+  font-size: 11px; font-weight: 800; color: #888; letter-spacing: 1px;
+  cursor: pointer; text-transform: uppercase; user-select: none;
+}
+.examples summary:hover { color: var(--navy); }
+.examples .ex-item {
+  margin-top: 10px; padding: 10px 12px; background: #f8f9fc;
+  border-radius: 6px; font-size: 12px; color: #555;
+  cursor: pointer; border: 1.5px solid #eef; transition: all 0.15s;
+  line-height: 1.5;
+}
+.examples .ex-item:hover { border-color: var(--accent); background: #fffdf0; }
+.examples .ex-item strong { color: var(--navy); }
+
+/* FAVORITES & HISTORY */
+.list-section {
+  background: white; border-radius: 10px; border: 1px solid #dde;
+  overflow: hidden; margin-bottom: 14px;
+}
+.list-header {
+  padding: 11px 16px; background: #f0f2f5;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid #e1e5eb;
+}
+.list-header .title { font-size: 11px; font-weight: 800; color: #555; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; }
+.list-header .count { background: #ccd; color: #556; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+.list-header .clear-btn { background: none; border: none; color: var(--red); font-size: 10px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; }
+
+.list-item {
+  padding: 10px 16px; border-bottom: 1px solid #eef;
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; transition: background 0.15s;
+}
+.list-item:hover { background: #f8f9fc; }
+.list-item:last-child { border-bottom: none; }
+.list-item .li-content { flex: 1; min-width: 0; cursor: pointer; }
+.list-item .li-name {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.list-item .li-meta {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  color: #888; margin-top: 1px;
+}
+.list-item .li-time { font-size: 10px; color: #aaa; flex-shrink: 0; }
+.list-item .li-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.list-item .li-action {
+  background: transparent; border: none; cursor: pointer;
+  padding: 4px 6px; border-radius: 4px; font-size: 14px;
+  color: #888; transition: all 0.15s;
+}
+.list-item .li-action:hover { background: #e1e5eb; color: var(--navy); }
+.list-item .li-action.star { color: var(--accent); font-size: 16px; }
+.list-item .li-action.star:hover { background: #fff4d6; }
+
+/* MODAL */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 100;
+  align-items: center; justify-content: center; padding: 16px;
+}
+.modal-backdrop.show { display: flex; }
+.modal {
+  background: white; border-radius: 12px; max-width: 420px;
+  width: 100%; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: slideIn 0.25s ease;
+}
+.modal-header {
+  background: var(--navy); padding: 14px 18px; color: white;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-header .title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1.5px; color: var(--accent); }
+.modal-header .close { background: none; border: none; color: #aab; font-size: 22px; cursor: pointer; line-height: 1; }
+.modal-body { padding: 18px; }
+.modal-body label { display: block; font-size: 11px; font-weight: 800; color: #555; letter-spacing: 0.5px; margin-bottom: 6px; text-transform: uppercase; }
+.modal-body input[type="text"] {
+  width: 100%; border: 2px solid #ccd; border-radius: 6px;
+  padding: 11px 13px; font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px; margin-bottom: 12px; outline: none;
+}
+.modal-body input[type="text"]:focus { border-color: var(--accent); }
+.modal-body .hint { font-size: 11px; color: var(--muted); margin: -6px 0 12px; line-height: 1.4; }
+.modal-footer { padding: 12px 18px; background: #f8f9fc; display: flex; gap: 8px; }
+.modal-footer .btn { flex: 1; }
+.modal-footer .btn-save { background: var(--green); color: white; }
+.modal-footer .btn-save:hover { background: #15682f; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 18px; left: 50%; transform: translate(-50%, 10px);
+  background: var(--navy); color: white;
+  padding: 11px 18px; border-radius: 6px;
+  border-left: 4px solid var(--accent);
+  font-size: 13px; font-weight: 600;
+  opacity: 0; transition: all 0.3s; z-index: 999;
+  pointer-events: none; max-width: 320px; text-align: center;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast.error { border-left-color: var(--red); }
+#toast.success { border-left-color: var(--green); }
+
+/* Hidden inputs by mode */
+.mode-panel { display: none; }
+.mode-panel.active { display: block; }
+
+@media (max-width: 600px) {
+  main { padding: 12px; }
+  .input-body textarea { min-height: 110px; font-size: 14px; }
+  .btn { padding: 11px 14px; font-size: 13px; }
+  .nav-btn { font-size: 15px; padding: 13px; }
+  .parsed-label { min-width: 75px; }
+  header h1 { font-size: 20px; }
+  header .subtitle { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>KT JOB NAVIGATOR</h1>
+    <span class="subtitle">Field Edition</span>
+  </div>
+  <button class="header-btn" onclick="openOriginModal()">⚙ ORIGIN</button>
+</header>
+
+<main>
+<div class="container">
+
+  <!-- ORIGIN BANNER -->
+  <div class="origin-banner" id="origin-banner">
+    <div class="icon">🏭</div>
+    <div class="info">
+      <div class="label">Starting From</div>
+      <div class="name" id="origin-name">Balcones Quarry, New Braunfels</div>
+    </div>
+    <button class="edit-btn" onclick="useCurrentLocation()">📍 USE GPS</button>
+  </div>
+
+  <!-- MODE TABS -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="paste" onclick="setMode('paste')">📋 PASTE</button>
+    <button class="mode-tab" data-mode="address" onclick="setMode('address')">🏠 ADDRESS</button>
+    <button class="mode-tab" data-mode="plss" onclick="setMode('plss')">🗺 PLSS</button>
+  </div>
+
+  <!-- INPUT SECTION -->
+  <div class="input-section">
+    <div class="input-header">
+      <span class="icon" id="mode-icon">📋</span>
+      <div>
+        <div class="title" id="mode-title">PASTE JOB DIRECTIONS</div>
+        <div class="subtitle" id="mode-subtitle">Conoco, ConocoPhillips, or any text with coordinates</div>
+      </div>
+    </div>
+    <div class="input-body">
+
+      <!-- PASTE MODE -->
+      <div class="mode-panel active" id="panel-paste">
+        <textarea id="input-text" placeholder="Paste Conoco job directions here...
+
+Example:
+Jo Ann Esse Unit D1 : From the intersection of IH 37 & Farm Road 99, travel north on Farm Road 99 for 5.2 miles to County Road 271 on right...
+Latitude: 28 42' 57.655&quot; N Longitude: 98 8' 26.03&quot;"></textarea>
+        <div class="input-helper">
+          <span class="pulse"></span>
+          <span>Auto-parses when you paste (or tap FIND)</span>
+        </div>
+      </div>
+
+      <!-- ADDRESS MODE -->
+      <div class="mode-panel" id="panel-address">
+        <input type="text" id="input-address" placeholder="2682 Wald Rd, New Braunfels, TX 78132" autocomplete="off">
+        <div class="input-helper" style="margin-top: 8px;">
+          <span>💡 Street address, place name, or business — anything Google Maps would find</span>
+        </div>
+      </div>
+
+      <!-- PLSS MODE -->
+      <div class="mode-panel" id="panel-plss">
+        <input type="text" id="input-plss" placeholder="Sec 14, T2N, R5W, San Bernardino Meridian" autocomplete="off">
+        <div class="input-helper" style="margin-top: 8px;">
+          <span>💡 Section-Township-Range. Examples: <code>Sec 14, T2N R5W</code> or <code>SE/4 Sec 23 T3S R4E</code></span>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-find" id="find-btn" onclick="processInput()">📍 FIND LOCATION</button>
+        <button class="btn btn-clear" onclick="clearAll()">CLEAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-section" id="result-section">
+    <div class="result-header">
+      <span class="title" id="result-title">📍 LOCATION FOUND</span>
+      <button class="star-btn" id="star-btn" onclick="toggleFavorite()" style="display:none;">★ SAVE</button>
+    </div>
+    <div class="result-body" id="result-body"></div>
+  </div>
+
+  <!-- EXAMPLES -->
+  <details class="examples">
+    <summary>SUPPORTED FORMATS</summary>
+    <div class="ex-item" onclick="loadExample(0)">
+      <strong>Full Conoco directions:</strong> Name + driving directions + DMS coordinates
+    </div>
+    <div class="ex-item" onclick="loadExample(1)">
+      <strong>Decimal Degrees:</strong> 28.7160, -98.1406
+    </div>
+    <div class="ex-item" onclick="loadExample(2)">
+      <strong>Google Maps Link:</strong> https://maps.google.com/?q=28.7160,-98.1406
+    </div>
+    <div class="ex-item" onclick="loadExample(3)">
+      <strong>DDM format:</strong> N 28° 42.961' W 098° 08.434'
+    </div>
+    <div class="ex-item" onclick="loadExample(4)">
+      <strong>UTM coordinates:</strong> 14R 388842 3179215
+    </div>
+  </details>
+
+  <!-- FAVORITES -->
+  <div class="list-section" id="favorites-section" style="display:none;">
+    <div class="list-header">
+      <div class="title">⭐ FAVORITES <span class="count" id="fav-count">0</span></div>
+      <button class="clear-btn" onclick="clearFavorites()">CLEAR ALL</button>
+    </div>
+    <div id="favorites-list"></div>
+  </div>
+
+  <!-- RECENT HISTORY -->
+  <div class="list-section" id="history-section" style="display:none;">
+    <div class="list-header">
+      <div class="title">🕐 RECENT <span class="count" id="hist-count">0</span></div>
+      <button class="clear-btn" onclick="clearHistory()">CLEAR</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+</div>
+</main>
+
+<!-- ORIGIN MODAL -->
+<div class="modal-backdrop" id="origin-modal" onclick="if(event.target===this)closeOriginModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="title">⚙ SET STARTING POINT</span>
+      <button class="close" onclick="closeOriginModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <label>Origin Name</label>
+      <input type="text" id="origin-name-input" placeholder="Balcones Quarry">
+      <label>Address or Coordinates</label>
+      <input type="text" id="origin-addr-input" placeholder="2682 Wald Rd, New Braunfels, TX 78132">
+      <div class="hint">Used as the default starting point for distance & ETA. Tap "📍 USE GPS" anytime to switch to your current location.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-clear" onclick="closeOriginModal()">CANCEL</button>
+      <button class="btn btn-save" onclick="saveOrigin()">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- RENAME MODAL -->
+<div class="modal-backdrop" id="rename-modal" onclick="if(event.target===this)closeRenameModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="title">✏ RENAME LOCATION</span>
+      <button class="close" onclick="closeRenameModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <label>Location Name</label>
+      <input type="text" id="rename-input" placeholder="Job site name">
+      <div class="hint">Pick something you'll recognize at 3am.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-clear" onclick="closeRenameModal()">CANCEL</button>
+      <button class="btn btn-save" onclick="saveRename()">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════ */
+var currentResult = null; // { name, lat, lng, directions, isFavorite, id }
+var currentMode = 'paste';
+var renameContext = null; // { type: 'fav'|'hist', id }
+var originOverride = null; // GPS coords when user taps USE GPS
+
+var DEFAULT_ORIGIN = {
+  name: 'Balcones Quarry, New Braunfels',
+  address: '2682 Wald Rd, New Braunfels, TX 78132',
+  lat: 29.7831, lng: -98.1245 // approximate, will be refined on first lookup
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   MODE SWITCHING
+   ═══════════════════════════════════════════════════════════════ */
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.mode === mode);
+  });
+  document.querySelectorAll('.mode-panel').forEach(function(p) {
+    p.classList.toggle('active', p.id === 'panel-' + mode);
+  });
+
+  var modeIcon = document.getElementById('mode-icon');
+  var modeTitle = document.getElementById('mode-title');
+  var modeSub = document.getElementById('mode-subtitle');
+
+  if (mode === 'paste') {
+    modeIcon.textContent = '📋'; modeTitle.textContent = 'PASTE JOB DIRECTIONS';
+    modeSub.textContent = 'Conoco, ConocoPhillips, or any text with coordinates';
+    setTimeout(function(){ document.getElementById('input-text').focus(); }, 50);
+  } else if (mode === 'address') {
+    modeIcon.textContent = '🏠'; modeTitle.textContent = 'STREET ADDRESS';
+    modeSub.textContent = 'Address, place name, or business';
+    setTimeout(function(){ document.getElementById('input-address').focus(); }, 50);
+  } else if (mode === 'plss') {
+    modeIcon.textContent = '🗺'; modeTitle.textContent = 'PLSS / SECTION-TOWNSHIP-RANGE';
+    modeSub.textContent = 'Public Land Survey System coordinates';
+    setTimeout(function(){ document.getElementById('input-plss').focus(); }, 50);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INPUT PROCESSING
+   ═══════════════════════════════════════════════════════════════ */
+function processInput() {
+  if (currentMode === 'paste') {
+    parseDirections();
+  } else if (currentMode === 'address') {
+    parseAddress();
+  } else if (currentMode === 'plss') {
+    parsePLSS();
+  }
+}
+
+function parseDirections() {
+  var text = document.getElementById('input-text').value.trim();
+  if (!text) { toast('Paste directions first', 'error'); return; }
+
+  var result = extractCoordinates(text);
+  var jobName = extractJobName(text);
+  var directions = extractDirectionsText(text);
+
+  if (!result) {
+    showError('No coordinates found',
+      'Could not detect latitude/longitude in the pasted text.<br><br>' +
+      '<strong>Try these formats:</strong><br>' +
+      '• Latitude: 28 42\' 57.655" N Longitude: 98 8\' 26.03"<br>' +
+      '• 28.7160, -98.1406<br>' +
+      '• N 28° 42.961 W 098° 08.434<br>' +
+      '• 14R 388842 3179215 (UTM)<br>' +
+      '<div class="hint">Or try the ADDRESS or PLSS tab if you don\'t have coords.</div>');
+    return;
+  }
+
+  displayResult({
+    name: jobName || 'Unknown Location',
+    lat: result.lat,
+    lng: result.lng,
+    rawLat: result.rawLat,
+    rawLng: result.rawLng,
+    directions: directions,
+    source: 'pasted'
+  });
+}
+
+function parseAddress() {
+  var addr = document.getElementById('input-address').value.trim();
+  if (!addr) { toast('Enter an address first', 'error'); return; }
+
+  showLoading('Looking up address...');
+  geocodeAddress(addr).then(function(geo) {
+    if (geo) {
+      displayResult({
+        name: geo.displayName || addr,
+        lat: geo.lat,
+        lng: geo.lng,
+        rawLat: geo.lat.toFixed(6),
+        rawLng: geo.lng.toFixed(6),
+        directions: 'Address: ' + addr,
+        source: 'geocoded'
+      });
+    } else {
+      // Fallback: hand off to Google Maps directly
+      hideResult();
+      var fallbackUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(addr);
+      window.open(fallbackUrl, '_blank');
+      toast('Geocoding unavailable — opened in Google Maps', 'success');
+    }
+  }).catch(function(err) {
+    console.error(err);
+    var fallbackUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(addr);
+    window.open(fallbackUrl, '_blank');
+    toast('Geocoding failed — opened in Google Maps', 'success');
+    hideResult();
+  });
+}
+
+function parsePLSS() {
+  var input = document.getElementById('input-plss').value.trim();
+  if (!input) { toast('Enter PLSS coordinates first', 'error'); return; }
+
+  showLoading('Looking up PLSS section...');
+  geocodePLSS(input).then(function(geo) {
+    if (geo) {
+      displayResult({
+        name: geo.displayName || input,
+        lat: geo.lat,
+        lng: geo.lng,
+        rawLat: geo.lat.toFixed(6),
+        rawLng: geo.lng.toFixed(6),
+        directions: 'PLSS: ' + input,
+        source: 'plss'
+      });
+    } else {
+      showError('PLSS section not found',
+        'Could not locate that section. PLSS lookup requires:<br><br>' +
+        '• A recognized township & range (e.g., T2N, R5W)<br>' +
+        '• A section number (1-36)<br>' +
+        '• Optionally a meridian or state<br><br>' +
+        '<strong>Examples that work:</strong><br>' +
+        '• <code>Sec 14, T2N, R5W, San Bernardino Meridian</code><br>' +
+        '• <code>Section 23, Township 3 South, Range 4 East, Texas</code>' +
+        '<div class="hint">PLSS coverage varies by state. Western US (TX, NM, OK, CO, WY, etc.) generally works well.</div>');
+    }
+  }).catch(function() {
+    showError('PLSS lookup failed', 'Network error — check your connection and try again.');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GEOCODING (Nominatim / OpenStreetMap, free, no key)
+   ═══════════════════════════════════════════════════════════════ */
+function geocodeAddress(addr) {
+  var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(addr);
+  return fetch(url, { headers: { 'Accept': 'application/json' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lng: parseFloat(data[0].lon),
+          displayName: data[0].display_name.split(',').slice(0, 2).join(',').trim()
+        };
+      }
+      return null;
+    });
+}
+
+function geocodePLSS(input) {
+  // Nominatim can sometimes resolve PLSS via structured queries; we also try BLM-style notation
+  var normalized = input.replace(/\s+/g, ' ').trim();
+  return geocodeAddress(normalized + ', USA').then(function(r) {
+    if (r) return r;
+    // Strip qualifiers (SE/4, NW/4, etc.) and retry
+    var stripped = normalized.replace(/^[NSEW][NSEW]?\/?\d?\s+/i, '').replace(/^(NE|NW|SE|SW)\s*1?\/?4\s*/i, '');
+    return geocodeAddress(stripped + ', USA');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESULT DISPLAY
+   ═══════════════════════════════════════════════════════════════ */
+function showLoading(msg) {
+  var section = document.getElementById('result-section');
+  var body = document.getElementById('result-body');
+  var title = document.getElementById('result-title');
+  section.className = 'result-section show loading';
+  title.textContent = '⏳ ' + msg.toUpperCase();
+  body.innerHTML = '<div style="padding:20px;text-align:center;color:#888;font-size:13px;">' + escHtml(msg) + '</div>';
+  document.getElementById('star-btn').style.display = 'none';
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function hideResult() {
+  document.getElementById('result-section').className = 'result-section';
+}
+
+function showError(title, html) {
+  var section = document.getElementById('result-section');
+  var body = document.getElementById('result-body');
+  var titleEl = document.getElementById('result-title');
+  section.className = 'result-section show error';
+  titleEl.textContent = '⚠ ' + title.toUpperCase();
+  body.innerHTML = '<div class="error-msg">' + html + '</div>';
+  document.getElementById('star-btn').style.display = 'none';
+  currentResult = null;
+}
+
+function displayResult(r) {
+  var section = document.getElementById('result-section');
+  var body = document.getElementById('result-body');
+  var title = document.getElementById('result-title');
+  var starBtn = document.getElementById('star-btn');
+
+  section.className = 'result-section show';
+  title.textContent = '📍 LOCATION FOUND';
+
+  var id = 'loc_' + Math.abs(r.lat * 10000 | 0) + '_' + Math.abs(r.lng * 10000 | 0);
+  var isFav = isFavorite(id);
+  currentResult = { id: id, name: r.name, lat: r.lat, lng: r.lng, directions: r.directions, source: r.source };
+
+  starBtn.style.display = 'inline-block';
+  starBtn.classList.toggle('starred', isFav);
+  starBtn.innerHTML = isFav ? '★ SAVED' : '☆ SAVE';
+
+  var lat = r.lat, lng = r.lng;
+  var navUrlGoogle = 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng;
+  var navUrlApple = 'https://maps.apple.com/?daddr=' + lat + ',' + lng;
+  var navUrlWaze = 'https://www.waze.com/ul?ll=' + lat + ',' + lng + '&navigate=yes';
+  var viewUrl = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+
+  body.innerHTML =
+    '<div id="eta-container"></div>' +
+    '<div class="parsed-field">' +
+      '<div class="parsed-label">Job Name</div>' +
+      '<div class="parsed-value jobname">' + escHtml(r.name) + '</div>' +
+    '</div>' +
+    '<div class="parsed-field">' +
+      '<div class="parsed-label">Latitude</div>' +
+      '<div class="parsed-value coords">' + lat.toFixed(6) + (lat >= 0 ? '° N' : '° S') + '</div>' +
+    '</div>' +
+    '<div class="parsed-field">' +
+      '<div class="parsed-label">Longitude</div>' +
+      '<div class="parsed-value coords">' + Math.abs(lng).toFixed(6) + (lng >= 0 ? '° E' : '° W') + '</div>' +
+    '</div>' +
+    (r.rawLat && r.rawLat !== lat.toFixed(6) ? '<div class="parsed-field">' +
+      '<div class="parsed-label">Raw Input</div>' +
+      '<div class="parsed-value" style="font-size:12px;color:#888;">' + escHtml(r.rawLat) + ' / ' + escHtml(r.rawLng) + '</div>' +
+    '</div>' : '') +
+
+    '<a href="' + navUrlGoogle + '" target="_blank" class="nav-btn primary">' +
+      '<span class="arrow">🧭</span> NAVIGATE WITH GOOGLE MAPS' +
+    '</a>' +
+    '<a href="' + navUrlApple + '" target="_blank" class="nav-btn apple">' +
+      '<span class="arrow">🗺</span> NAVIGATE WITH APPLE MAPS' +
+    '</a>' +
+    '<a href="' + navUrlWaze + '" target="_blank" class="nav-btn waze">' +
+      '<span class="arrow">🚗</span> NAVIGATE WITH WAZE' +
+    '</a>' +
+    '<a href="' + viewUrl + '" target="_blank" class="nav-btn view">' +
+      '<span class="arrow">👁</span> VIEW ON MAP (no nav)' +
+    '</a>' +
+
+    '<div class="action-row">' +
+      '<button class="action-btn" onclick="copyText(\'' + lat.toFixed(6) + ', ' + lng.toFixed(6) + '\', this)">📋 Copy Coords</button>' +
+      '<button class="action-btn" onclick="copyText(\'' + navUrlGoogle + '\', this)">🔗 Copy Link</button>' +
+      '<button class="action-btn" onclick="copyAll()">📝 Copy All</button>' +
+      '<button class="action-btn share" onclick="shareLocation()">📤 Share</button>' +
+    '</div>' +
+
+    (r.directions ? '<div class="section-label">Driving Directions</div>' +
+      '<div class="directions-text">' + escHtml(r.directions) + '</div>' : '');
+
+  // Compute and inject ETA
+  computeAndShowETA(lat, lng);
+
+  // Save to history
+  saveHistory(r.name, lat, lng, r.directions);
+
+  // Scroll to result
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ETA / DISTANCE
+   ═══════════════════════════════════════════════════════════════ */
+function getOrigin() {
+  if (originOverride) return originOverride;
+  var stored = JSON.parse(localStorage.getItem('kt_nav_origin') || 'null');
+  return stored || DEFAULT_ORIGIN;
+}
+
+function computeAndShowETA(destLat, destLng) {
+  var container = document.getElementById('eta-container');
+  if (!container) return;
+
+  var origin = getOrigin();
+  container.innerHTML =
+    '<div class="eta-badge">' +
+      '<div class="eta-stat">' +
+        '<div class="eta-label">Distance</div>' +
+        '<div class="eta-value loading" id="eta-dist">calculating...</div>' +
+      '</div>' +
+      '<div class="divider"></div>' +
+      '<div class="eta-stat">' +
+        '<div class="eta-label">Drive Time</div>' +
+        '<div class="eta-value loading" id="eta-time">calculating...</div>' +
+      '</div>' +
+    '</div>';
+
+  // Ensure origin has coords; if not, geocode it first
+  var originPromise;
+  if (origin.lat && origin.lng) {
+    originPromise = Promise.resolve(origin);
+  } else if (origin.address) {
+    originPromise = geocodeAddress(origin.address).then(function(g) {
+      if (g) {
+        origin.lat = g.lat; origin.lng = g.lng;
+        if (!originOverride) {
+          localStorage.setItem('kt_nav_origin', JSON.stringify(origin));
+        }
+        return origin;
+      }
+      return null;
+    });
+  } else {
+    originPromise = Promise.resolve(null);
+  }
+
+  originPromise.then(function(o) {
+    if (!o || !o.lat) {
+      document.getElementById('eta-dist').textContent = '—';
+      document.getElementById('eta-time').textContent = '—';
+      return;
+    }
+    var distMi = haversine(o.lat, o.lng, destLat, destLng);
+    var avgSpeed = distMi < 5 ? 30 : (distMi < 30 ? 45 : 55); // crude estimate
+    var driveMin = Math.round((distMi / avgSpeed) * 60);
+
+    document.getElementById('eta-dist').classList.remove('loading');
+    document.getElementById('eta-time').classList.remove('loading');
+    document.getElementById('eta-dist').textContent = distMi.toFixed(1) + ' mi';
+    document.getElementById('eta-time').textContent = formatDuration(driveMin);
+  });
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  var R = 3959; // miles
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+          Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+          Math.sin(dLng/2) * Math.sin(dLng/2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function formatDuration(min) {
+  if (min < 60) return '~' + min + ' min';
+  var h = Math.floor(min / 60);
+  var m = min % 60;
+  return '~' + h + 'h ' + m + 'm';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ORIGIN MANAGEMENT
+   ═══════════════════════════════════════════════════════════════ */
+function loadOrigin() {
+  var stored = JSON.parse(localStorage.getItem('kt_nav_origin') || 'null');
+  if (!stored) {
+    localStorage.setItem('kt_nav_origin', JSON.stringify(DEFAULT_ORIGIN));
+    stored = DEFAULT_ORIGIN;
+  }
+  document.getElementById('origin-name').textContent = stored.name;
+}
+
+function openOriginModal() {
+  var o = JSON.parse(localStorage.getItem('kt_nav_origin') || 'null') || DEFAULT_ORIGIN;
+  document.getElementById('origin-name-input').value = o.name;
+  document.getElementById('origin-addr-input').value = o.address;
+  document.getElementById('origin-modal').classList.add('show');
+}
+
+function closeOriginModal() {
+  document.getElementById('origin-modal').classList.remove('show');
+}
+
+function saveOrigin() {
+  var name = document.getElementById('origin-name-input').value.trim() || 'Starting Point';
+  var addr = document.getElementById('origin-addr-input').value.trim();
+  if (!addr) { toast('Address required', 'error'); return; }
+
+  var origin = { name: name, address: addr, lat: null, lng: null };
+
+  // Try to geocode immediately
+  toast('Saving origin...');
+  geocodeAddress(addr).then(function(geo) {
+    if (geo) { origin.lat = geo.lat; origin.lng = geo.lng; }
+    localStorage.setItem('kt_nav_origin', JSON.stringify(origin));
+    originOverride = null;
+    document.getElementById('origin-name').textContent = name;
+    closeOriginModal();
+    toast('Origin saved', 'success');
+  }).catch(function() {
+    localStorage.setItem('kt_nav_origin', JSON.stringify(origin));
+    originOverride = null;
+    document.getElementById('origin-name').textContent = name;
+    closeOriginModal();
+    toast('Origin saved (geocoding failed)', 'success');
+  });
+}
+
+function useCurrentLocation() {
+  if (!navigator.geolocation) { toast('GPS not available', 'error'); return; }
+  toast('Getting GPS location...');
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    originOverride = {
+      name: 'Current Location',
+      address: 'GPS',
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude
+    };
+    document.getElementById('origin-name').textContent = 'Current Location (GPS)';
+    toast('Using current GPS location', 'success');
+    if (currentResult) {
+      computeAndShowETA(currentResult.lat, currentResult.lng);
+    }
+  }, function(err) {
+    toast('GPS error: ' + err.message, 'error');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COORDINATE PARSING (preserved from original + UTM added)
+   ═══════════════════════════════════════════════════════════════ */
+function extractCoordinates(text) {
+
+  // Pattern 1: DMS with labels — Latitude: 28 42' 57.655" N Longitude: 98 8' 26.03"
+  var dmsLabeled = text.match(/Lat(?:itude)?[:\s]*(\d{1,3})[\s°]+(\d{1,2})['\u2019\u2032\s]+([0-9.]+)["\u201D\u2033]?\s*([NSns])\s*(?:[,;/|&\s]*)?Lon(?:gitude)?[:\s]*(\d{1,3})[\s°]+(\d{1,2})['\u2019\u2032\s]+([0-9.]+)["\u201D\u2033]?\s*([EWew])?/i);
+  if (dmsLabeled) {
+    var lat = dmsToDecimal(dmsLabeled[1], dmsLabeled[2], dmsLabeled[3], dmsLabeled[4]);
+    var lng = dmsToDecimal(dmsLabeled[5], dmsLabeled[6], dmsLabeled[7], dmsLabeled[8] || 'W');
+    return { lat: lat, lng: lng,
+             rawLat: dmsLabeled[1] + '° ' + dmsLabeled[2] + "' " + dmsLabeled[3] + '" ' + dmsLabeled[4],
+             rawLng: dmsLabeled[5] + '° ' + dmsLabeled[6] + "' " + dmsLabeled[7] + '" ' + (dmsLabeled[8] || 'W') };
+  }
+
+  // Pattern 2: DMS without labels
+  var dmsPlain = text.match(/(\d{1,3})[\s°]+(\d{1,2})['\u2019\u2032\s]+([0-9.]+)["\u201D\u2033]?\s*([NSns])\s*[,;/|\s]+(\d{1,3})[\s°]+(\d{1,2})['\u2019\u2032\s]+([0-9.]+)["\u201D\u2033]?\s*([EWew])/i);
+  if (dmsPlain) {
+    var lat = dmsToDecimal(dmsPlain[1], dmsPlain[2], dmsPlain[3], dmsPlain[4]);
+    var lng = dmsToDecimal(dmsPlain[5], dmsPlain[6], dmsPlain[7], dmsPlain[8]);
+    return { lat: lat, lng: lng,
+             rawLat: dmsPlain[1] + '° ' + dmsPlain[2] + "' " + dmsPlain[3] + '" ' + dmsPlain[4],
+             rawLng: dmsPlain[5] + '° ' + dmsPlain[6] + "' " + dmsPlain[7] + '" ' + dmsPlain[8] };
+  }
+
+  // Pattern 3: DDM — N 28° 42.961' W 098° 08.434'
+  var ddm = text.match(/([NSns])\s*(\d{1,3})[\s°]+([0-9.]+)['\u2019\u2032]?\s*[,;/|\s]+([EWew])\s*(\d{1,3})[\s°]+([0-9.]+)['\u2019\u2032]?/i);
+  if (ddm) {
+    var lat = ddmToDecimal(ddm[2], ddm[3], ddm[1]);
+    var lng = ddmToDecimal(ddm[5], ddm[6], ddm[4]);
+    return { lat: lat, lng: lng,
+             rawLat: ddm[1] + ' ' + ddm[2] + '° ' + ddm[3] + "'",
+             rawLng: ddm[4] + ' ' + ddm[5] + '° ' + ddm[6] + "'" };
+  }
+
+  // Pattern 4: Decimal with labels
+  var decLabeled = text.match(/Lat(?:itude)?[:\s]*(-?\d{1,3}\.\d+)\s*[,;/|\s]*Lon(?:gitude)?[:\s]*(-?\d{1,3}\.\d+)/i);
+  if (decLabeled) {
+    return { lat: parseFloat(decLabeled[1]), lng: parseFloat(decLabeled[2]),
+             rawLat: decLabeled[1], rawLng: decLabeled[2] };
+  }
+
+  // Pattern 5: Plain decimal
+  var decPlain = text.match(/(-?\d{1,3}\.\d{3,})\s*[,\s]+\s*(-?\d{1,3}\.\d{3,})/);
+  if (decPlain) {
+    var a = parseFloat(decPlain[1]);
+    var b = parseFloat(decPlain[2]);
+    if (Math.abs(a) <= 90 && Math.abs(b) <= 180) {
+      return { lat: a, lng: b, rawLat: decPlain[1], rawLng: decPlain[2] };
+    }
+  }
+
+  // Pattern 6: Google Maps URL
+  var gMaps = text.match(/maps.*[?&@]q?=?(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/i);
+  if (!gMaps) gMaps = text.match(/maps.*@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/i);
+  if (gMaps) {
+    return { lat: parseFloat(gMaps[1]), lng: parseFloat(gMaps[2]),
+             rawLat: gMaps[1], rawLng: gMaps[2] };
+  }
+
+  // Pattern 7: DMS compact — 28°42'57.6"N 98°8'26.0"W
+  var dmsCompact = text.match(/(\d{1,3})[°](\d{1,2})['\u2019\u2032]([0-9.]+)["\u201D\u2033]\s*([NSns])\s*[,\s]*(\d{1,3})[°](\d{1,2})['\u2019\u2032]([0-9.]+)["\u201D\u2033]\s*([EWew])/i);
+  if (dmsCompact) {
+    var lat = dmsToDecimal(dmsCompact[1], dmsCompact[2], dmsCompact[3], dmsCompact[4]);
+    var lng = dmsToDecimal(dmsCompact[5], dmsCompact[6], dmsCompact[7], dmsCompact[8]);
+    return { lat: lat, lng: lng,
+             rawLat: dmsCompact[1] + '°' + dmsCompact[2] + "'" + dmsCompact[3] + '"' + dmsCompact[4],
+             rawLng: dmsCompact[5] + '°' + dmsCompact[6] + "'" + dmsCompact[7] + '"' + dmsCompact[8] };
+  }
+
+  // Pattern 8: UTM — "14R 388842 3179215" or "14 R 388842 mE 3179215 mN"
+  var utm = text.match(/\b(\d{1,2})\s*([C-X])\s+(\d{6,7})\s*(?:mE)?\s+(\d{6,7})\s*(?:mN)?\b/i);
+  if (utm) {
+    var ll = utmToLatLng(parseInt(utm[1]), utm[2].toUpperCase(), parseInt(utm[3]), parseInt(utm[4]));
+    if (ll) {
+      return { lat: ll.lat, lng: ll.lng,
+               rawLat: 'UTM ' + utm[1] + utm[2] + ' ' + utm[3] + ' E',
+               rawLng: utm[4] + ' N' };
+    }
+  }
+
+  return null;
+}
+
+function dmsToDecimal(deg, min, sec, dir) {
+  var d = parseFloat(deg) + parseFloat(min) / 60 + parseFloat(sec) / 3600;
+  if (dir.toUpperCase() === 'S' || dir.toUpperCase() === 'W') d = -d;
+  return d;
+}
+
+function ddmToDecimal(deg, decMin, dir) {
+  var d = parseFloat(deg) + parseFloat(decMin) / 60;
+  if (dir.toUpperCase() === 'S' || dir.toUpperCase() === 'W') d = -d;
+  return d;
+}
+
+// UTM to Lat/Lng (WGS84)
+function utmToLatLng(zone, zoneLetter, easting, northing) {
+  try {
+    var northern = 'NPQRSTUVWX'.indexOf(zoneLetter.toUpperCase()) >= 0;
+    var a = 6378137.0, e = 0.081819191;
+    var e1sq = 0.006739497;
+    var k0 = 0.9996;
+    var arc = (northern ? northing : northing - 10000000) / k0;
+    var mu = arc / (a * (1 - Math.pow(e, 2) / 4.0 - 3 * Math.pow(e, 4) / 64.0 - 5 * Math.pow(e, 6) / 256.0));
+    var ei = (1 - Math.sqrt(1 - Math.pow(e, 2))) / (1 + Math.sqrt(1 - Math.pow(e, 2)));
+    var ca = 3 * ei / 2 - 27 * Math.pow(ei, 3) / 32.0;
+    var cb = 21 * Math.pow(ei, 2) / 16 - 55 * Math.pow(ei, 4) / 32;
+    var cc = 151 * Math.pow(ei, 3) / 96;
+    var cd = 1097 * Math.pow(ei, 4) / 512;
+    var phi1 = mu + ca * Math.sin(2 * mu) + cb * Math.sin(4 * mu) + cc * Math.sin(6 * mu) + cd * Math.sin(8 * mu);
+    var n0 = a / Math.sqrt(1 - Math.pow(e * Math.sin(phi1), 2));
+    var r0 = a * (1 - Math.pow(e, 2)) / Math.pow(1 - Math.pow(e * Math.sin(phi1), 2), 1.5);
+    var fact1 = n0 * Math.tan(phi1) / r0;
+    var _a1 = 500000 - easting;
+    var dd0 = _a1 / (n0 * k0);
+    var fact2 = dd0 * dd0 / 2;
+    var t0 = Math.pow(Math.tan(phi1), 2);
+    var Q0 = e1sq * Math.pow(Math.cos(phi1), 2);
+    var fact3 = (5 + 3 * t0 + 10 * Q0 - 4 * Q0 * Q0 - 9 * e1sq) * Math.pow(dd0, 4) / 24;
+    var fact4 = (61 + 90 * t0 + 298 * Q0 + 45 * t0 * t0 - 252 * e1sq - 3 * Q0 * Q0) * Math.pow(dd0, 6) / 720;
+    var lof1 = _a1 / (n0 * k0);
+    var lof2 = (1 + 2 * t0 + Q0) * Math.pow(dd0, 3) / 6.0;
+    var lof3 = (5 - 2 * Q0 + 28 * t0 - 3 * Math.pow(Q0, 2) + 8 * e1sq + 24 * Math.pow(t0, 2)) * Math.pow(dd0, 5) / 120;
+    var _a2 = (lof1 - lof2 + lof3) / Math.cos(phi1);
+    var _a3 = _a2 * 180 / Math.PI;
+    var lat = 180 * (phi1 - fact1 * (fact2 + fact3 + fact4)) / Math.PI;
+    if (!northern) lat = -lat;
+    var lng = ((zone > 0) && (6 * zone - 183.0) - _a3) || _a3;
+    lng = (6 * zone - 183.0) - _a3;
+    return { lat: lat, lng: lng };
+  } catch(e) { return null; }
+}
+
+function extractJobName(text) {
+  var lines = text.split(/[\r\n]+/);
+  var firstLine = lines[0].trim();
+
+  var colonSplit = firstLine.match(/^(.+?)\s*:\s*From/i);
+  if (colonSplit) return colonSplit[1].trim();
+
+  var dashSplit = firstLine.match(/^(.+?)\s*[-–—]\s*From/i);
+  if (dashSplit) return dashSplit[1].trim();
+
+  if (firstLine.length < 60 && !firstLine.match(/\d{2,3}[\s°]/)) {
+    return firstLine;
+  }
+  return '';
+}
+
+function extractDirectionsText(text) {
+  var dirMatch = text.match(/(?:From\s+(?:the\s+)?(?:intersection|junction|corner|crossing).+?)(?=Lat(?:itude)?|GPS|Coord|\d{1,3}[\s°]+\d{1,2}['\u2019]|$)/is);
+  if (dirMatch) return dirMatch[0].trim();
+
+  var beforeCoords = text.split(/Lat(?:itude)?[:\s]*\d/i)[0];
+  var afterName = beforeCoords.replace(/^.+?:\s*/i, '');
+  if (afterName.length > 20) return afterName.trim();
+  return '';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FAVORITES
+   ═══════════════════════════════════════════════════════════════ */
+function getFavorites() {
+  return JSON.parse(localStorage.getItem('kt_nav_favorites') || '[]');
+}
+
+function isFavorite(id) {
+  return getFavorites().some(function(f) { return f.id === id; });
+}
+
+function toggleFavorite() {
+  if (!currentResult) return;
+  var favs = getFavorites();
+  var idx = favs.findIndex(function(f) { return f.id === currentResult.id; });
+
+  if (idx >= 0) {
+    favs.splice(idx, 1);
+    localStorage.setItem('kt_nav_favorites', JSON.stringify(favs));
+    document.getElementById('star-btn').classList.remove('starred');
+    document.getElementById('star-btn').innerHTML = '☆ SAVE';
+    toast('Removed from favorites');
+  } else {
+    favs.unshift({
+      id: currentResult.id,
+      name: currentResult.name,
+      lat: currentResult.lat,
+      lng: currentResult.lng,
+      directions: currentResult.directions || '',
+      time: new Date().toLocaleString('en-US', { month:'numeric', day:'numeric', year:'2-digit' })
+    });
+    localStorage.setItem('kt_nav_favorites', JSON.stringify(favs));
+    document.getElementById('star-btn').classList.add('starred');
+    document.getElementById('star-btn').innerHTML = '★ SAVED';
+    toast('Saved to favorites ⭐', 'success');
+  }
+  renderFavorites();
+}
+
+function deleteFavorite(id) {
+  var favs = getFavorites().filter(function(f) { return f.id !== id; });
+  localStorage.setItem('kt_nav_favorites', JSON.stringify(favs));
+  renderFavorites();
+  if (currentResult && currentResult.id === id) {
+    document.getElementById('star-btn').classList.remove('starred');
+    document.getElementById('star-btn').innerHTML = '☆ SAVE';
+  }
+  toast('Deleted');
+}
+
+function clearFavorites() {
+  if (!confirm('Clear all favorites? This cannot be undone.')) return;
+  localStorage.removeItem('kt_nav_favorites');
+  renderFavorites();
+  toast('Favorites cleared');
+}
+
+function renderFavorites() {
+  var favs = getFavorites();
+  var section = document.getElementById('favorites-section');
+  var list = document.getElementById('favorites-list');
+  document.getElementById('fav-count').textContent = favs.length;
+
+  if (!favs.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  list.innerHTML = favs.map(function(f) {
+    var navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + f.lat + ',' + f.lng;
+    return '<div class="list-item">' +
+      '<div class="li-content" onclick="loadSaved(\'' + f.id + '\', \'fav\')">' +
+        '<div class="li-name">⭐ ' + escHtml(f.name) + '</div>' +
+        '<div class="li-meta">' + f.lat.toFixed(4) + ', ' + f.lng.toFixed(4) + '</div>' +
+      '</div>' +
+      '<div class="li-actions">' +
+        '<button class="li-action" title="Rename" onclick="event.stopPropagation();openRenameModal(\'fav\',\'' + f.id + '\')">✏</button>' +
+        '<button class="li-action" title="Navigate" onclick="event.stopPropagation();window.open(\'' + navUrl + '\',\'_blank\')">🧭</button>' +
+        '<button class="li-action" title="Delete" onclick="event.stopPropagation();deleteFavorite(\'' + f.id + '\')">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HISTORY
+   ═══════════════════════════════════════════════════════════════ */
+function saveHistory(name, lat, lng, directions) {
+  var history = JSON.parse(localStorage.getItem('kt_nav_history') || '[]');
+  var id = 'loc_' + Math.abs(lat * 10000 | 0) + '_' + Math.abs(lng * 10000 | 0);
+  // Dedupe by id
+  history = history.filter(function(h) { return h.id !== id; });
+  history.unshift({
+    id: id,
+    name: name, lat: lat, lng: lng,
+    directions: directions || '',
+    time: new Date().toLocaleString('en-US', { month:'numeric', day:'numeric', hour:'numeric', minute:'2-digit' })
+  });
+  if (history.length > 30) history = history.slice(0, 30);
+  localStorage.setItem('kt_nav_history', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  var history = JSON.parse(localStorage.getItem('kt_nav_history') || '[]');
+  var section = document.getElementById('history-section');
+  var list = document.getElementById('history-list');
+  document.getElementById('hist-count').textContent = history.length;
+
+  if (!history.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  list.innerHTML = history.map(function(h) {
+    var navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + h.lat + ',' + h.lng;
+    return '<div class="list-item">' +
+      '<div class="li-content" onclick="loadSaved(\'' + h.id + '\', \'hist\')">' +
+        '<div class="li-name">' + escHtml(h.name) + '</div>' +
+        '<div class="li-meta">' + h.lat.toFixed(4) + ', ' + h.lng.toFixed(4) + ' • ' + h.time + '</div>' +
+      '</div>' +
+      '<div class="li-actions">' +
+        '<button class="li-action" title="Rename" onclick="event.stopPropagation();openRenameModal(\'hist\',\'' + h.id + '\')">✏</button>' +
+        '<button class="li-action" title="Navigate" onclick="event.stopPropagation();window.open(\'' + navUrl + '\',\'_blank\')">🧭</button>' +
+        '<button class="li-action" title="Delete" onclick="event.stopPropagation();deleteHistory(\'' + h.id + '\')">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function deleteHistory(id) {
+  var history = JSON.parse(localStorage.getItem('kt_nav_history') || '[]')
+    .filter(function(h) { return h.id !== id; });
+  localStorage.setItem('kt_nav_history', JSON.stringify(history));
+  renderHistory();
+  toast('Removed');
+}
+
+function clearHistory() {
+  if (!confirm('Clear all history?')) return;
+  localStorage.removeItem('kt_nav_history');
+  renderHistory();
+  toast('History cleared');
+}
+
+function loadSaved(id, type) {
+  var list = type === 'fav' ? getFavorites() : JSON.parse(localStorage.getItem('kt_nav_history') || '[]');
+  var item = list.find(function(x) { return x.id === id; });
+  if (!item) return;
+  displayResult({
+    name: item.name,
+    lat: item.lat,
+    lng: item.lng,
+    rawLat: item.lat.toFixed(6),
+    rawLng: item.lng.toFixed(6),
+    directions: item.directions || '',
+    source: type
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENAME
+   ═══════════════════════════════════════════════════════════════ */
+function openRenameModal(type, id) {
+  var list = type === 'fav' ? getFavorites() : JSON.parse(localStorage.getItem('kt_nav_history') || '[]');
+  var item = list.find(function(x) { return x.id === id; });
+  if (!item) return;
+  renameContext = { type: type, id: id };
+  document.getElementById('rename-input').value = item.name;
+  document.getElementById('rename-modal').classList.add('show');
+  setTimeout(function() { document.getElementById('rename-input').focus(); document.getElementById('rename-input').select(); }, 100);
+}
+
+function closeRenameModal() {
+  document.getElementById('rename-modal').classList.remove('show');
+  renameContext = null;
+}
+
+function saveRename() {
+  if (!renameContext) return;
+  var newName = document.getElementById('rename-input').value.trim();
+  if (!newName) { toast('Name cannot be empty', 'error'); return; }
+
+  var key = renameContext.type === 'fav' ? 'kt_nav_favorites' : 'kt_nav_history';
+  var list = JSON.parse(localStorage.getItem(key) || '[]');
+  var item = list.find(function(x) { return x.id === renameContext.id; });
+  if (item) {
+    item.name = newName;
+    localStorage.setItem(key, JSON.stringify(list));
+    if (renameContext.type === 'fav') renderFavorites();
+    else renderHistory();
+    if (currentResult && currentResult.id === renameContext.id) {
+      currentResult.name = newName;
+    }
+    toast('Renamed', 'success');
+  }
+  closeRenameModal();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SHARE & COPY
+   ═══════════════════════════════════════════════════════════════ */
+function copyAll() {
+  if (!currentResult) return;
+  var navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + currentResult.lat + ',' + currentResult.lng;
+  var text = currentResult.name + '\n' +
+    currentResult.lat.toFixed(6) + ', ' + currentResult.lng.toFixed(6) + '\n' +
+    navUrl;
+  if (currentResult.directions) text += '\n\n' + currentResult.directions;
+  copyText(text);
+}
+
+function shareLocation() {
+  if (!currentResult) return;
+  var navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + currentResult.lat + ',' + currentResult.lng;
+  var shareText = currentResult.name + '\n' +
+    currentResult.lat.toFixed(6) + ', ' + currentResult.lng.toFixed(6) + '\n' +
+    navUrl;
+  if (currentResult.directions) shareText += '\n\n' + currentResult.directions;
+
+  if (navigator.share) {
+    navigator.share({
+      title: 'Job Location: ' + currentResult.name,
+      text: shareText,
+      url: navUrl
+    }).then(function() {
+      toast('Shared', 'success');
+    }).catch(function(err) {
+      if (err.name !== 'AbortError') {
+        // Fallback to SMS
+        var smsBody = encodeURIComponent(shareText);
+        window.location.href = 'sms:?&body=' + smsBody;
+      }
+    });
+  } else {
+    // Desktop / no Web Share — open SMS-style fallback or copy
+    var smsBody = encodeURIComponent(shareText);
+    var canSms = /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (canSms) {
+      window.location.href = 'sms:?&body=' + smsBody;
+    } else {
+      copyText(shareText);
+      toast('Copied — paste to share', 'success');
+    }
+  }
+}
+
+function copyText(text, btn) {
+  text = text.replace(/\\n/g, '\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      if (btn) {
+        var orig = btn.textContent;
+        btn.classList.add('copied');
+        btn.textContent = '✓ Copied';
+        setTimeout(function() {
+          btn.classList.remove('copied');
+          btn.textContent = orig;
+        }, 1800);
+      }
+      toast('Copied to clipboard', 'success');
+    }).catch(fallback);
+  } else { fallback(); }
+
+  function fallback() {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('Copied', 'success'); }
+    catch(e) { toast('Copy failed', 'error'); }
+    document.body.removeChild(ta);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EXAMPLES
+   ═══════════════════════════════════════════════════════════════ */
+var examples = [
+  'Jo Ann Esse Unit D1 : From the intersection of IH 37 & Farm Road 99, travel north on Farm Road 99 for 5.2 miles to County Road 271 on right. Follow County Road 271 for 2.4 miles to lease entrance on right. Follow lease road for 1.9 miles to location on left.\nLatitude: 28 42\' 57.655" N Longitude: 98 8\' 26.03"',
+  '28.7160, -98.1406',
+  'https://www.google.com/maps?q=28.7160,-98.1406',
+  'GPS: N 28° 42.961\' W 098° 08.434\'',
+  '14R 388842 3179215'
+];
+
+function loadExample(idx) {
+  setMode('paste');
+  document.getElementById('input-text').value = examples[idx];
+  document.getElementById('input-text').focus();
+  toast('Example loaded — tap FIND LOCATION');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════════════ */
+function clearAll() {
+  document.getElementById('input-text').value = '';
+  document.getElementById('input-address').value = '';
+  document.getElementById('input-plss').value = '';
+  hideResult();
+  currentResult = null;
+  if (currentMode === 'paste') document.getElementById('input-text').focus();
+  else if (currentMode === 'address') document.getElementById('input-address').focus();
+  else document.getElementById('input-plss').focus();
+}
+
+function escHtml(t) {
+  if (t == null) return '';
+  var div = document.createElement('div');
+  div.textContent = String(t);
+  return div.innerHTML;
+}
+
+function toast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = '';
+  if (type) t.classList.add(type);
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTO-PARSE ON PASTE
+   ═══════════════════════════════════════════════════════════════ */
+document.getElementById('input-text').addEventListener('paste', function(e) {
+  // Allow paste to complete, then auto-parse
+  setTimeout(function() {
+    var v = document.getElementById('input-text').value.trim();
+    if (v.length > 5) {
+      parseDirections();
+    }
+  }, 100);
+});
+
+// Enter key submits in single-line inputs
+document.getElementById('input-address').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); parseAddress(); }
+});
+document.getElementById('input-plss').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); parsePLSS(); }
+});
+document.getElementById('origin-addr-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); saveOrigin(); }
+});
+document.getElementById('rename-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); saveRename(); }
+});
+
+// Escape closes modals
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeOriginModal();
+    closeRenameModal();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════ */
+loadOrigin();
+renderFavorites();
+renderHistory();
+</script>
+</body>
+</html>
