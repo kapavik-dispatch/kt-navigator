@@ -289,6 +289,51 @@ main {
 .nav-btn-pair.from-me.apple { background: #4a6a8a; }
 .nav-btn-pair.from-me.waze { background: #55ddff; }
 
+/* Avoid Roads / Via Waypoint section */
+.avoid-section {
+  margin-top: 16px; padding: 12px; background: #fff8e6;
+  border: 1.5px solid #e0c878; border-radius: 8px;
+}
+.avoid-header { margin-bottom: 8px; }
+.avoid-label {
+  font-size: 12px; font-weight: 800; color: #5a4520;
+  letter-spacing: 0.5px; display: block;
+}
+.avoid-hint {
+  font-size: 11px; color: #806640; line-height: 1.4;
+  display: block; margin-top: 3px;
+}
+.avoid-input-row { display: flex; gap: 6px; }
+.avoid-input-row input {
+  flex: 1; padding: 9px 11px; border: 1.5px solid #ccb888;
+  border-radius: 5px; font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px; outline: none; background: white;
+}
+.avoid-input-row input:focus { border-color: var(--accent); }
+.avoid-apply {
+  padding: 9px 14px; background: var(--navy); color: white; border: none;
+  border-radius: 5px; font-weight: 800; font-size: 11px;
+  letter-spacing: 0.5px; cursor: pointer; font-family: inherit;
+}
+.avoid-apply:hover { background: var(--blue); }
+.avoid-active {
+  margin-top: 8px; padding: 6px 10px; background: #e8f4e8;
+  border: 1px solid #a8c8a8; border-radius: 5px;
+  font-size: 12px; color: #2a5a2a; display: flex;
+  align-items: center; justify-content: space-between;
+}
+.avoid-active button {
+  background: none; border: none; color: #c0392b;
+  font-size: 11px; cursor: pointer; text-decoration: underline;
+}
+
+/* Waypoint badge in favorites/history */
+.li-wp {
+  display: inline-block; background: #fff4d6; color: #806640;
+  font-size: 9px; font-weight: 800; padding: 1px 6px;
+  border-radius: 8px; margin-left: 4px; letter-spacing: 0.3px;
+}
+
 /* Directions text */
 .directions-text {
   background: #f8f9fc; border: 1.5px solid #dde; border-radius: 6px;
@@ -955,6 +1000,171 @@ function detectStateHint(text) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   GOOGLE MAPS APP LAUNCHER — opens native app on iPhone for editable routes
+   ═══════════════════════════════════════════════════════════════ */
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+function isAndroid() {
+  return /android/i.test(navigator.userAgent);
+}
+
+// Open Google Maps with editable routing.
+// On iPhone: try comgooglemaps:// (opens the Google Maps app — supports drag-to-reroute,
+// long-press to add waypoint, etc.), fall back to Safari if app not installed.
+// Elsewhere: open the web URL directly (desktop allows drag-to-reroute in browser).
+function openGoogleMaps(originParam, destLat, destLng, waypoint) {
+  // Build common pieces
+  var dest = destLat + ',' + destLng;
+  var wpQuery = waypoint ? '&waypoints=' + encodeURIComponent(waypoint) : '';
+  var webUrl = 'https://www.google.com/maps/dir/?api=1' +
+               (originParam ? '&origin=' + originParam : '') +
+               '&destination=' + dest + wpQuery;
+
+  if (isIOS()) {
+    // Try the Google Maps app via custom URL scheme
+    var appUrl = 'comgooglemaps://?' +
+                 (originParam ? 'saddr=' + originParam + '&' : '') +
+                 'daddr=' + dest + wpQuery +
+                 '&directionsmode=driving';
+
+    // Strategy: try to launch the app. If the user doesn't have it installed,
+    // Safari will silently ignore the comgooglemaps:// URL, so set a fallback
+    // timer that opens the web URL after 1.5 seconds if we're still on this page.
+    var fallbackTimer = setTimeout(function() {
+      window.location.href = webUrl;
+    }, 1500);
+
+    // If the page becomes hidden (user switched to Maps app), cancel fallback
+    document.addEventListener('visibilitychange', function onVis() {
+      if (document.hidden) {
+        clearTimeout(fallbackTimer);
+        document.removeEventListener('visibilitychange', onVis);
+      }
+    });
+
+    window.location.href = appUrl;
+  } else {
+    // Desktop or Android — open web URL in a new tab (browser drag works on desktop;
+    // Android's web Maps will offer "Open in app" prompt automatically).
+    window.open(webUrl, '_blank');
+  }
+}
+
+// Open Apple Maps — already opens the native app on iPhone via maps.apple.com URLs
+function openAppleMaps(originParam, destLat, destLng, waypoint) {
+  var dest = destLat + ',' + destLng;
+  // Apple Maps doesn't officially support waypoints in URL scheme, but if a waypoint
+  // is supplied we add it as a hint via &dirflg or just append to daddr
+  var url = 'https://maps.apple.com/?' +
+            (originParam ? 'saddr=' + originParam + '&' : '') +
+            'daddr=' + dest;
+  if (waypoint) {
+    // Apple Maps will route through this as an additional destination
+    url += '+to:' + encodeURIComponent(waypoint);
+  }
+  if (isIOS()) {
+    window.location.href = url;  // opens native Apple Maps app on iOS
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
+// Open Waze — native app on iPhone/Android, web fallback elsewhere.
+// Waze doesn't accept an origin (always uses current GPS).
+function openWaze(destLat, destLng) {
+  var url = 'https://www.waze.com/ul?ll=' + destLat + ',' + destLng + '&navigate=yes';
+  if (isIOS() || isAndroid()) {
+    window.location.href = url;
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   NAV BUTTON HANDLERS — wired to the launchers above
+   ═══════════════════════════════════════════════════════════════ */
+function navGoogle(originMode) {
+  if (!currentResult) return;
+  var origin = getOrigin();
+  var originParam = '';
+  if (originMode === 'quarry') {
+    if (origin.address) originParam = encodeURIComponent(origin.address);
+    else if (origin.lat && origin.lng) originParam = origin.lat + ',' + origin.lng;
+  }
+  // For 'me', leave originParam empty so the app uses current GPS
+  openGoogleMaps(originParam, currentResult.lat, currentResult.lng, currentResult.waypoint);
+}
+
+function navApple(originMode) {
+  if (!currentResult) return;
+  var origin = getOrigin();
+  var originParam = '';
+  if (originMode === 'quarry') {
+    if (origin.address) originParam = encodeURIComponent(origin.address);
+    else if (origin.lat && origin.lng) originParam = origin.lat + ',' + origin.lng;
+  }
+  openAppleMaps(originParam, currentResult.lat, currentResult.lng, currentResult.waypoint);
+}
+
+function navWaze() {
+  if (!currentResult) return;
+  if (currentResult.waypoint) {
+    toast('Waze does not support waypoints — routing direct', 'error');
+  }
+  openWaze(currentResult.lat, currentResult.lng);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WAYPOINT (AVOID ROADS) MANAGEMENT
+   ═══════════════════════════════════════════════════════════════ */
+function applyWaypoint() {
+  if (!currentResult) return;
+  var input = document.getElementById('waypoint-input');
+  var val = input ? input.value.trim() : '';
+  currentResult.waypoint = val;
+
+  // Persist to favorites if this location is favorited
+  var favs = getFavorites();
+  var fav = favs.find(function(f) { return f.id === currentResult.id; });
+  if (fav) {
+    fav.waypoint = val;
+    localStorage.setItem('kt_nav_favorites', JSON.stringify(favs));
+    renderFavorites();
+  }
+
+  // Persist to history too so it sticks across reloads
+  var history = JSON.parse(localStorage.getItem('kt_nav_history') || '[]');
+  var hist = history.find(function(h) { return h.id === currentResult.id; });
+  if (hist) {
+    hist.waypoint = val;
+    localStorage.setItem('kt_nav_history', JSON.stringify(history));
+  }
+
+  // Re-render the result so the "Active" badge shows/hides
+  displayResult({
+    name: currentResult.name,
+    lat: currentResult.lat,
+    lng: currentResult.lng,
+    rawLat: currentResult.lat.toFixed(6),
+    rawLng: currentResult.lng.toFixed(6),
+    directions: currentResult.directions,
+    waypoint: val,
+    source: currentResult.source
+  });
+
+  if (val) toast('Waypoint set — route will go through it', 'success');
+  else toast('Waypoint cleared', 'success');
+}
+
+function clearWaypoint() {
+  var input = document.getElementById('waypoint-input');
+  if (input) input.value = '';
+  applyWaypoint();
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
    GEOCODING (Nominatim / OpenStreetMap, free, no key)
    ═══════════════════════════════════════════════════════════════ */
 function geocodeAddress(addr) {
@@ -1013,7 +1223,7 @@ function displayResult(r) {
 
   var id = 'loc_' + Math.abs(r.lat * 10000 | 0) + '_' + Math.abs(r.lng * 10000 | 0);
   var isFav = isFavorite(id);
-  currentResult = { id: id, name: r.name, lat: r.lat, lng: r.lng, directions: r.directions, source: r.source };
+  currentResult = { id: id, name: r.name, lat: r.lat, lng: r.lng, directions: r.directions, waypoint: r.waypoint || '', source: r.source };
 
   starBtn.style.display = 'inline-block';
   starBtn.classList.toggle('starred', isFav);
@@ -1027,28 +1237,23 @@ function displayResult(r) {
   // reliable than passing approximate coordinates.
   var origin = getOrigin();
   var originParam = '';
-  var originParamApple = '';  // Apple Maps uses saddr=address+separated+by+plus
   if (origin && origin.address) {
     originParam = encodeURIComponent(origin.address);
-    originParamApple = encodeURIComponent(origin.address);
   } else if (origin && origin.lat && origin.lng) {
     originParam = origin.lat + ',' + origin.lng;
-    originParamApple = origin.lat + ',' + origin.lng;
   }
 
-  // FROM ORIGIN (e.g. CEMEX) — explicit origin
-  var navGoogleQuarry = 'https://www.google.com/maps/dir/?api=1&origin=' + originParam + '&destination=' + lat + ',' + lng;
-  var navAppleQuarry  = 'https://maps.apple.com/?saddr=' + originParamApple + '&daddr=' + lat + ',' + lng;
+  // Check for a saved waypoint (from favorites/history) — used to route AROUND
+  // weight-restricted or otherwise prohibited roads
+  var waypoint = (r.waypoint || '').trim();
+  // Stash on currentResult so the avoid-roads field can read/edit it
+  currentResult.waypoint = waypoint;
 
-  // FROM ME — let the maps app use current GPS as origin (no origin param)
-  var navGoogleMe = 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng;
-  var navAppleMe  = 'https://maps.apple.com/?daddr=' + lat + ',' + lng;
-  var navWazeMe   = 'https://www.waze.com/ul?ll=' + lat + ',' + lng + '&navigate=yes';
-
+  // Build a web URL for copy/share buttons (used in copyAll, share, etc.)
+  var navUrlGoogle = 'https://www.google.com/maps/dir/?api=1&origin=' + originParam +
+                     '&destination=' + lat + ',' + lng +
+                     (waypoint ? '&waypoints=' + encodeURIComponent(waypoint) : '');
   var viewUrl = 'https://www.google.com/maps?q=' + lat + ',' + lng;
-
-  // For backward-compat (used elsewhere in copy/share)
-  var navUrlGoogle = navGoogleQuarry;
 
   // Short label for the "FROM ORIGIN" buttons — first word of origin name, uppercased
   var originShort = (origin.name || 'Quarry').split(',')[0].split(' ')[0].toUpperCase();
@@ -1076,30 +1281,43 @@ function displayResult(r) {
     // ── GOOGLE MAPS — paired buttons
     '<div class="nav-section-label">Google Maps</div>' +
     '<div class="nav-pair">' +
-      '<a href="' + navGoogleQuarry + '" target="_blank" class="nav-btn-pair from-quarry">' +
+      '<button onclick="navGoogle(\'quarry\')" class="nav-btn-pair from-quarry">' +
         '<span class="nav-icon">🏭</span><span class="nav-text">FROM ' + escHtml(originShort) + '</span>' +
-      '</a>' +
-      '<a href="' + navGoogleMe + '" target="_blank" class="nav-btn-pair from-me">' +
+      '</button>' +
+      '<button onclick="navGoogle(\'me\')" class="nav-btn-pair from-me">' +
         '<span class="nav-icon">📍</span><span class="nav-text">FROM ME</span>' +
-      '</a>' +
+      '</button>' +
     '</div>' +
 
     // ── APPLE MAPS — paired buttons
     '<div class="nav-section-label">Apple Maps</div>' +
     '<div class="nav-pair">' +
-      '<a href="' + navAppleQuarry + '" target="_blank" class="nav-btn-pair from-quarry apple">' +
+      '<button onclick="navApple(\'quarry\')" class="nav-btn-pair from-quarry apple">' +
         '<span class="nav-icon">🏭</span><span class="nav-text">FROM ' + escHtml(originShort) + '</span>' +
-      '</a>' +
-      '<a href="' + navAppleMe + '" target="_blank" class="nav-btn-pair from-me apple">' +
+      '</button>' +
+      '<button onclick="navApple(\'me\')" class="nav-btn-pair from-me apple">' +
         '<span class="nav-icon">📍</span><span class="nav-text">FROM ME</span>' +
-      '</a>' +
+      '</button>' +
     '</div>' +
 
     // ── WAZE — single button (Waze deep links always use current GPS as origin)
     '<div class="nav-section-label">Waze <span style="font-weight:600;text-transform:none;color:#aab;">(always from current location)</span></div>' +
-    '<a href="' + navWazeMe + '" target="_blank" class="nav-btn waze">' +
+    '<button onclick="navWaze()" class="nav-btn waze">' +
       '<span class="arrow">🚗</span> NAVIGATE WITH WAZE' +
-    '</a>' +
+    '</button>' +
+
+    // ── AVOID ROADS / VIA WAYPOINT
+    '<div class="avoid-section">' +
+      '<div class="avoid-header">' +
+        '<span class="avoid-label">🚧 Avoid Roads / Via Waypoint</span>' +
+        '<span class="avoid-hint">Type an intersection or road to route THROUGH (bypasses restricted roads)</span>' +
+      '</div>' +
+      '<div class="avoid-input-row">' +
+        '<input type="text" id="waypoint-input" placeholder="e.g. FM 99 & CR 350, or US 181 Karnes City" value="' + escHtml(waypoint) + '">' +
+        '<button class="avoid-apply" onclick="applyWaypoint()">APPLY</button>' +
+      '</div>' +
+      (waypoint ? '<div class="avoid-active">✓ Routing through: <strong>' + escHtml(waypoint) + '</strong> <button onclick="clearWaypoint()">remove</button></div>' : '') +
+    '</div>' +
 
     '<a href="' + viewUrl + '" target="_blank" class="nav-btn view">' +
       '<span class="arrow">👁</span> VIEW ON MAP (no nav)' +
@@ -1118,8 +1336,8 @@ function displayResult(r) {
   // Compute and inject ETA
   computeAndShowETA(lat, lng);
 
-  // Save to history
-  saveHistory(r.name, lat, lng, r.directions);
+  // Save to history (preserve waypoint if already set)
+  saveHistory(r.name, lat, lng, r.directions, waypoint);
 
   // Scroll to result
   section.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1485,6 +1703,7 @@ function toggleFavorite() {
       lat: currentResult.lat,
       lng: currentResult.lng,
       directions: currentResult.directions || '',
+      waypoint: currentResult.waypoint || '',
       time: new Date().toLocaleString('en-US', { month:'numeric', day:'numeric', year:'2-digit' })
     });
     localStorage.setItem('kt_nav_favorites', JSON.stringify(favs));
@@ -1523,10 +1742,12 @@ function renderFavorites() {
   section.style.display = 'block';
 
   list.innerHTML = favs.map(function(f) {
-    var navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + f.lat + ',' + f.lng;
+    var navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + f.lat + ',' + f.lng +
+                 (f.waypoint ? '&waypoints=' + encodeURIComponent(f.waypoint) : '');
+    var wpBadge = f.waypoint ? '<span class="li-wp" title="Via: ' + escHtml(f.waypoint) + '">🚧 via</span>' : '';
     return '<div class="list-item">' +
       '<div class="li-content" onclick="loadSaved(\'' + f.id + '\', \'fav\')">' +
-        '<div class="li-name">⭐ ' + escHtml(f.name) + '</div>' +
+        '<div class="li-name">⭐ ' + escHtml(f.name) + ' ' + wpBadge + '</div>' +
         '<div class="li-meta">' + f.lat.toFixed(4) + ', ' + f.lng.toFixed(4) + '</div>' +
       '</div>' +
       '<div class="li-actions">' +
@@ -1541,15 +1762,19 @@ function renderFavorites() {
 /* ═══════════════════════════════════════════════════════════════
    HISTORY
    ═══════════════════════════════════════════════════════════════ */
-function saveHistory(name, lat, lng, directions) {
+function saveHistory(name, lat, lng, directions, waypoint) {
   var history = JSON.parse(localStorage.getItem('kt_nav_history') || '[]');
   var id = 'loc_' + Math.abs(lat * 10000 | 0) + '_' + Math.abs(lng * 10000 | 0);
+  // If this id is already in history, preserve its existing waypoint (unless a new one was explicitly passed)
+  var existing = history.find(function(h) { return h.id === id; });
+  var preservedWaypoint = waypoint || (existing && existing.waypoint) || '';
   // Dedupe by id
   history = history.filter(function(h) { return h.id !== id; });
   history.unshift({
     id: id,
     name: name, lat: lat, lng: lng,
     directions: directions || '',
+    waypoint: preservedWaypoint,
     time: new Date().toLocaleString('en-US', { month:'numeric', day:'numeric', hour:'numeric', minute:'2-digit' })
   });
   if (history.length > 30) history = history.slice(0, 30);
@@ -1567,10 +1792,12 @@ function renderHistory() {
   section.style.display = 'block';
 
   list.innerHTML = history.map(function(h) {
-    var navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + h.lat + ',' + h.lng;
+    var navUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + h.lat + ',' + h.lng +
+                 (h.waypoint ? '&waypoints=' + encodeURIComponent(h.waypoint) : '');
+    var wpBadge = h.waypoint ? '<span class="li-wp" title="Via: ' + escHtml(h.waypoint) + '">🚧 via</span>' : '';
     return '<div class="list-item">' +
       '<div class="li-content" onclick="loadSaved(\'' + h.id + '\', \'hist\')">' +
-        '<div class="li-name">' + escHtml(h.name) + '</div>' +
+        '<div class="li-name">' + escHtml(h.name) + ' ' + wpBadge + '</div>' +
         '<div class="li-meta">' + h.lat.toFixed(4) + ', ' + h.lng.toFixed(4) + ' • ' + h.time + '</div>' +
       '</div>' +
       '<div class="li-actions">' +
@@ -1608,6 +1835,7 @@ function loadSaved(id, type) {
     rawLat: item.lat.toFixed(6),
     rawLng: item.lng.toFixed(6),
     directions: item.directions || '',
+    waypoint: item.waypoint || '',
     source: type
   });
 }
